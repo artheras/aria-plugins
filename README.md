@@ -1,1 +1,1 @@
-# aria-platform
+# aria-plugins
