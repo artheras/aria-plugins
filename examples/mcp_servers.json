@@ -2,7 +2,7 @@
   "servers": [
     {
       "name": "aria-commerce",
-      "command": "${ARIA_COMMERCE_MCP_BIN}",
+      "command": "/absolute/path/to/aria-plugins/bin/aria-commerce-mcp",
       "args": [],
       "env": {
         "ARIA_COMMERCE_URL": "${ARIA_COMMERCE_URL}",

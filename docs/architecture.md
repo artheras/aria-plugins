@@ -21,7 +21,9 @@ flowchart LR
 
 Shared Go contracts live in packages/sdk. Drafter, Provider, and Store are independent interfaces. The Commerce application composes them; providers do not depend on the UI. A future service can reuse those packages through Go imports, or access Commerce through HTTP/MCP from Rust or another language.
 
-The Aria package contains declarative commands and skills. It uses the same external Go MCP process as any compatible client; this repository does not change Aria's plugin loader.
+The repository distributes plugins through a root marketplace catalogue. Each plugins/<name> package contains metadata, workflows, and host-specific MCP configuration. The canonical plugin skills are mirrored to root skills/ for the current Aria installer; packages/catalog generates and verifies their integrity locks.
+
+Aria's existing /skills add installs verified workflows. MCP registration and executable setup remain separate. The command Markdown is supplied for hosts that load plugin commands; the current skills installer does not register it. This repository does not change Aria's host loader. A future full plugin manager belongs in aria-code, while Go or Rust MCP tools remain independently reusable.
 
 ## State and authority
 

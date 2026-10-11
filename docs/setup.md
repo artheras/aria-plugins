@@ -53,7 +53,7 @@ The model selects SKUs and quantities; it never supplies trusted prices or recei
 
 Build both binaries with `make build`. Set a random `ARIA_MERCHANT_TOKEN` of at least 32 characters on both the Commerce server and the MCP process, even when testing MCP in demo mode.
 
-Set `ARIA_COMMERCE_MCP_BIN` to the **absolute path** of `bin/aria-commerce-mcp`, and `ARIA_COMMERCE_URL` to the server's origin. Merge [examples/mcp_servers.json](../examples/mcp_servers.json) into your existing `~/.arthera/mcp_servers.json`; preserve other server entries. Aria's environment placeholder expansion resolves those values.
+Set the configuration's `command` to the **literal absolute path** of `bin/aria-commerce-mcp`, and export `ARIA_COMMERCE_URL` with the server's origin. Merge [examples/mcp_servers.json](../examples/mcp_servers.json) into the actual Aria home directory's `mcp_servers.json`; preserve other server entries. Aria home is `ARIA_HOME` if set, the existing legacy `~/.arthera` directory, or `~/.aria-code` for new users. The current Aria client expands environment placeholders in `args` and `env`, **not command**.
 
 The stdio bridge negotiates MCP 2024-11-05 (used by the existing Aria client) or 2025-06-18 and exposes:
 
@@ -65,7 +65,7 @@ The stdio bridge negotiates MCP 2024-11-05 (used by the existing Aria client) or
 
 Approval, checkout, and capture are intentionally absent. In the browser, click **Merchant session** and enter the same configured token to access MCP-created orders. Open `/?order=RETURNED_ORDER_ID` after connecting. Tokens are sent in an Authorization header by the bridge and are not part of order URLs.
 
-[plugins/commerce](../plugins/commerce) contains a command/skill manifest matching Aria's existing package format. Installing that package does not register the Go binary automatically. Actual interaction with the full Aria client still needs an integration run in your configured environment.
+[plugins/commerce](../plugins/commerce) contains the command/skill package and host configurations. Run `/skills add artheras/aria-plugins` inside Aria to install its verified workflow, then `/skills doctor`. Invoke `$commerce:commerce` after MCP registration. The [connection guide](aria-code.zh-CN.md) covers the exact installation boundary. A full interactive Aria agent run still needs a configured model and local environment.
 
 ## 5. Docker
 

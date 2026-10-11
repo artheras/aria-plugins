@@ -1,0 +1,16 @@
+{
+  "name": "aria-plugins",
+  "description": "Aria Code plugin catalogue: portable workflows and Go MCP integrations.",
+  "owner": {"name": "Arthera", "url": "https://github.com/artheras"},
+  "metadata": {"version": "0.2.0", "repository": "https://github.com/artheras/aria-plugins"},
+  "plugins": [
+    {
+      "name": "commerce",
+      "source": "./plugins/commerce",
+      "version": "0.2.0",
+      "description": "Draft catalogue orders with Go MCP; review and PayPal Sandbox checkout in the browser.",
+      "repository": "https://github.com/artheras/aria-plugins",
+      "skills": ["./skills/commerce"]
+    }
+  ]
+}

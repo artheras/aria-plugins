@@ -5,7 +5,9 @@ description: Prepare and inspect catalogue orders using the Go Aria Commerce MCP
 
 Use this skill when the user asks to draft an order from the Commerce catalogue or inspect an existing order.
 
-The Go service must be running and the MCP bridge must be configured using examples/mcp_servers.json. The plugin manifest provides commands and this skill; it does not automatically install or start Go binaries.
+The Go service must be running and the Commerce MCP bridge must be configured. In Aria Code, add this catalogue with /skills add artheras/aria-plugins, inspect it with /skills doctor, and explicitly invoke $commerce:commerce. Skill installation does not build binaries or register MCP servers. Follow the repository's docs/aria-code.zh-CN.md for those steps.
+
+If the MCP tools are unavailable, explain which setup step is missing. Do not invent tool results or silently replace the merchant service with another provider. The runtime may prefix tool names with its server namespace; use the exposed Commerce tools matching the names below.
 
 Available tools:
 

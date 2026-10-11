@@ -1,7 +1,7 @@
 {
   "name": "commerce",
   "displayName": "Aria Commerce",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Catalogue order drafts via Go MCP, human review, and PayPal Sandbox checkout in the browser.",
   "capabilities": ["commands", "skills"],
   "permissions": ["read_catalog", "draft_orders", "read_orders"],

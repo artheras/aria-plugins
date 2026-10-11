@@ -1,0 +1,9 @@
+{
+  "name": "commerce",
+  "displayName": "Aria Commerce",
+  "version": "0.2.0",
+  "description": "Catalogue order drafts via Go MCP, human review, and PayPal Sandbox checkout in the browser.",
+  "author": {"name": "Arthera", "url": "https://github.com/artheras"},
+  "repository": "https://github.com/artheras/aria-plugins",
+  "license": "MIT"
+}

@@ -1,6 +1,6 @@
 # 中文快速配置
 
-这次业务代码使用 Go，网页使用原生 HTML/CSS/JavaScript。仓库提供 Commerce 应用以及可复用的 agents、approvals、payments、store 模块。
+这是 Aria Code 的插件目录。第一个 Commerce 插件的业务代码使用 Go，网页使用原生 HTML/CSS/JavaScript，并提供可复用的 agents、approvals、payments、store 模块。插件安装和 MCP 连接见 [连接 Aria Code](aria-code.zh-CN.md)。
 
 ## 现在就能体验
 
@@ -45,6 +45,6 @@ set +a
 
 Vercel 新建项目导入 aria-plugins，根目录选仓库根，框架选 Go。必须配置持久化 Redis 的 REST URL、读写 Token、稳定的会话密钥以及准确的 PUBLIC_URL。服务器不会在 Vercel 上用临时文件保存支付记录。
 
-Aria MCP 配置样板位于 examples/mcp_servers.json。编译后填写 Go MCP 二进制的绝对路径，并让它与网页服务使用相同的商户 Token。MCP 可读取商品、生成草稿、查询订单；确认与支付由用户在网页中操作。
+在 Aria 交互会话执行 `/skills add artheras/aria-plugins` 和 `/skills doctor`，安装并验证 `commerce:commerce`。MCP 配置样板位于 examples/mcp_servers.json。编译后在 command 中填写 Go MCP 二进制的真实绝对路径，并让它与网页服务使用相同的商户 Token。当前 Aria 不展开 command 的变量占位符。MCP 可读取商品、生成草稿、查询订单；确认与支付由用户在网页中操作。技能安装不会自动注册 MCP，完整步骤见 [连接文档](aria-code.zh-CN.md)。
 
 完整步骤见 [英文配置文档](setup.md)。当前已通过本地演示与模拟接口测试；真实 AI、PayPal Sandbox、Aria 客户端集成和线上部署需要配置后再验证。

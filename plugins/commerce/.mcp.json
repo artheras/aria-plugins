@@ -1,0 +1,10 @@
+{
+  "aria-commerce": {
+    "command": "aria-commerce-mcp",
+    "args": [],
+    "env": {
+      "ARIA_COMMERCE_URL": "${ARIA_COMMERCE_URL}",
+      "ARIA_MERCHANT_TOKEN": "${ARIA_MERCHANT_TOKEN}"
+    }
+  }
+}
