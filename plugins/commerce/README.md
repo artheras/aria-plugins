@@ -13,7 +13,7 @@ Version: **0.2.0**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, cr
 | mcp.json | Aria server configuration template; replace the absolute binary path |
 | .mcp.json | Claude server configuration: bridge binary on PATH and exported environment values |
 
-In Aria Code, run `/skills add artheras/aria-plugins`, then `/skills doctor`. Invoke `$commerce:commerce` in a request. The current Aria installer loads verified skills; it does **not** automatically load the command file, build Go binaries, register MCP, or start the web service. Use the [Aria Code setup guide](../../docs/aria-code.zh-CN.md).
+In Aria Code, run `/skills add artheras/aria-plugins`, then `/skills doctor`. Invoke `$commerce:commerce` in a request. The current Aria installer loads verified skills; it does **not** automatically load the command file, build Go binaries, register MCP, or start the web service. Use the [Aria Code setup guide](../../docs/aria-code.md).
 
 Build the service and MCP binaries with `make build` at the repository root. The service and bridge use the same `ARIA_MERCHANT_TOKEN` and `ARIA_COMMERCE_URL`. No approval, checkout, or capture tool is exposed to the agent.
 

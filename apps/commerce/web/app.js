@@ -49,7 +49,7 @@ function render() {
   $('audit').replaceChildren();
   for(const event of order.events) {
     const li=document.createElement('li'); appendText(li,'strong',event.action.replaceAll('_',' ')); appendText(li,'p',event.detail);
-    const time=appendText(li,'time',new Date(event.at).toLocaleString()); time.dateTime=event.at; $('audit').append(li);
+    const time=appendText(li,'time',new Date(event.at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})); time.dateTime=event.at; $('audit').append(li);
   }
   const address=new URL(location.href); address.searchParams.set('order',order.id); address.searchParams.delete('token'); address.searchParams.delete('PayerID'); history.replaceState(null,'',address);
 }
@@ -70,6 +70,20 @@ $('login-form').addEventListener('submit',async event=>{
     const session=await api('/api/login',{token:$('token').value});csrf=session.csrf;$('token').value='';$('login-dialog').close();
     const id=new URL(location.href).searchParams.get('order'); if(id) await loadOrder(id); feedback('Merchant session connected.');
   } catch(e) {$('login-error').textContent=e.message;}
+});
+document.querySelectorAll('[data-copy]').forEach(button=>{
+  button.addEventListener('click',async()=>{
+    const command=$(button.dataset.copy);
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(command.textContent);
+      $('copy-status').textContent='Copied. Paste this into your Aria Code session.';
+    } catch {
+      const range=document.createRange();range.selectNodeContents(command);
+      const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+      $('copy-status').textContent='Command selected. Copy it and paste it into your Aria Code session.';
+    }
+  });
 });
 async function init() {
   try {

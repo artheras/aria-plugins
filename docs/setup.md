@@ -65,7 +65,7 @@ The stdio bridge negotiates MCP 2024-11-05 (used by the existing Aria client) or
 
 Approval, checkout, and capture are intentionally absent. In the browser, click **Merchant session** and enter the same configured token to access MCP-created orders. Open `/?order=RETURNED_ORDER_ID` after connecting. Tokens are sent in an Authorization header by the bridge and are not part of order URLs.
 
-[plugins/commerce](../plugins/commerce) contains the command/skill package and host configurations. Run `/skills add artheras/aria-plugins` inside Aria to install its verified workflow, then `/skills doctor`. Invoke `$commerce:commerce` after MCP registration. The [connection guide](aria-code.zh-CN.md) covers the exact installation boundary. A full interactive Aria agent run still needs a configured model and local environment.
+[plugins/commerce](../plugins/commerce) contains the command/skill package and host configurations. Run `/skills add artheras/aria-plugins` inside Aria to install its verified workflow, then `/skills doctor`. Invoke `$commerce:commerce` after MCP registration. The [connection guide](aria-code.md) covers the exact installation boundary. A full interactive Aria agent run still needs a configured model and local environment.
 
 ## 5. Docker
 

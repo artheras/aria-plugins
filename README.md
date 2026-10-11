@@ -2,7 +2,7 @@
 
 The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, and Go MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
-**Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The web application is an example of the plugin's tools.
+**Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
 
 ## Connect to Aria Code
 
@@ -21,7 +21,7 @@ $commerce:commerce Draft an order for 2 tees and 1 mug.
 
 The current Aria installer discovers root `skills/*/SKILL.md`, reads `.claude-plugin/marketplace.json`, and verifies `skills.lock.json`. The directory name is required by the existing Aria loader; it is a compatibility format.
 
-Skill installation does not register commands/MCP or build binaries. Configure and run the Go bridge using the [Aria Code connection guide](docs/aria-code.zh-CN.md). A full plugin manager that installs every component together belongs in the Aria Code host.
+Skill installation does not register commands/MCP or build binaries. Configure and run the Go bridge using the [Aria Code connection guide](docs/aria-code.md). A full plugin manager that installs every component together belongs in the Aria Code host.
 
 ## Catalogue layout
 
@@ -61,7 +61,7 @@ Open http://127.0.0.1:4180 and create an order for **2 tees and 1 mug**. Review 
 
 Default demo mode uses a small deterministic parser and simulated payment. It makes no AI or PayPal calls and moves no money. Sandbox mode never silently falls back to demo.
 
-![Commerce demo: reviewed and reconciled simulated order](docs/commerce-preview.jpg)
+![Commerce plugin demo: browser order review and Aria Code setup](docs/commerce-preview.jpg)
 
 ## Repository
 
@@ -86,8 +86,8 @@ Plugin names such as `commerce` are stable identifiers; change `displayName` for
 ## Configure and validate
 
 - [Setup: PayPal, AI Gateway, MCP, Docker, Vercel](docs/setup.md)
-- [中文配置说明](docs/setup.zh-CN.md)
-- [连接 Aria Code 与添加插件](docs/aria-code.zh-CN.md)
+- [Commerce quickstart](docs/quickstart.md)
+- [Connect to Aria Code](docs/aria-code.md)
 - [Architecture and HTTP contract](docs/architecture.md)
 - [Validation and remaining live checks](docs/testing.md)
 - [Devpost story draft](docs/devpost-story.md)

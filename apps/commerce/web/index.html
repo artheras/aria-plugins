@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Aria Commerce: draft, review, pay, and reconcile orders with reusable Go plugins.">
-  <title>Aria Commerce — Aria Plugins</title><link rel="stylesheet" href="/style.css">
+  <meta name="description" content="Try the Commerce plugin: draft and review an order, simulate payment, or connect its Go MCP tools to Aria Code.">
+  <title>Aria Commerce · Plugin Demo</title><link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="wordmark" href="/">Aria Plugins</a>
-    <nav aria-label="Main navigation"><a href="https://github.com/artheras/aria-plugins/blob/main/docs/setup.md" target="_blank" rel="noopener">Setup guide ↗</a><a href="https://github.com/artheras/aria-plugins" target="_blank" rel="noopener">GitHub ↗</a><button id="connect" class="quiet" hidden>Merchant session</button></nav>
+    <a class="wordmark" href="/">Aria Commerce</a>
+    <nav aria-label="Main navigation"><a href="#aria-code">Use in Aria Code</a><a class="setup-link" href="https://github.com/artheras/aria-plugins/blob/main/docs/setup.md" target="_blank" rel="noopener">Setup guide ↗</a><a href="https://github.com/artheras/aria-plugins" target="_blank" rel="noopener">GitHub ↗</a><button id="connect" class="quiet" hidden>Merchant session</button></nav>
   </header>
   <main>
-    <section class="hero"><div><p class="eyebrow">ARIA COMMERCE · BUILT WITH GO</p><h1>A request.<br>A reviewed order.<br>A verified payment.</h1><p class="intro">Let Aria prepare the details.<br>You decide what happens next.</p></div>
-      <aside class="hero-note"><span class="label">THE WORKFLOW</span><p>Reusable agent, approval, and payment modules. One small store to try them together.</p><a href="#workspace">Try an order <span aria-hidden="true">↓</span></a></aside>
+    <section class="hero"><div><p class="eyebrow">ARIA COMMERCE · PLUGIN DEMO</p><h1>A request.<br>A reviewed order.<br>A verified payment.</h1><p class="intro">Let Aria prepare the details.<br>You decide what happens next.</p><div class="hero-actions"><a class="primary" href="#workspace">Try the demo <span aria-hidden="true">↓</span></a><a class="hero-secondary" href="#aria-code">Use in Aria Code <span aria-hidden="true">↗</span></a></div></div>
+      <aside class="hero-note"><span class="label">ONE PLUGIN. TWO WAYS TO TRY IT.</span><p>Explore the browser workflow here, or connect the same Commerce tools to Aria Code. Built with reusable Go modules.</p><a href="#workspace">Try an order <span aria-hidden="true">↓</span></a></aside>
     </section>
     <div class="mode-banner" id="mode"><span class="dot"></span><span id="mode-text">Connecting to the commerce service…</span></div>
     <ol class="steps" aria-label="Order progress"><li data-stage="draft"><span>01</span> Draft</li><li data-stage="approved"><span>02</span> Review & approve</li><li data-stage="awaiting_payment"><span>03</span> Checkout</li><li data-stage="paid"><span>04</span> Reconcile</li></ol>
@@ -51,12 +51,21 @@
     </section>
     <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
     <section class="audit-section">
-      <div><p class="eyebrow">03 / ACTIVITY</p><h2>A record of<br>every decision.</h2><p class="fine">Stored on the server.<br>Available after a refresh.</p><button id="refresh" class="quiet" hidden>Refresh order ↻</button></div>
+      <div><p class="eyebrow">03 / ACTIVITY</p><h2>A record of <br>every decision.</h2><p class="fine">Stored on the server.<br>Available after a refresh.</p><button id="refresh" class="quiet" hidden>Refresh order ↻</button></div>
       <ol id="audit" class="audit"><li class="audit-placeholder">Create a draft to begin the activity record.</li></ol>
     </section>
-    <section class="modules"><div><p class="eyebrow">BUILT TO REUSE</p><h2>One workflow.<br>Four independent pieces.</h2></div><div class="module"><span>01</span><h3>Agents</h3><p>Turn a request into catalogue selections.</p></div><div class="module"><span>02</span><h3>Approvals</h3><p>Bind a human decision to an exact invoice.</p></div><div class="module"><span>03</span><h3>Payments</h3><p>Create, capture, and verify Sandbox payments.</p></div><div class="module"><span>04</span><h3>Storage</h3><p>Keep orders and their decision history.</p></div></section>
+    <section id="aria-code" class="connection-section" aria-labelledby="connection-title">
+      <div class="connection-intro"><p class="eyebrow">USE IN ARIA CODE</p><h2 id="connection-title">The same workflow.<br>Inside your agent.</h2><p>Install the Commerce skill, connect its Go tools, and let Aria prepare a draft. Review and approve the exact invoice in the browser.</p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/aria-code.md" target="_blank" rel="noopener">Read the connection guide ↗</a><p class="fine">Skill installation and MCP setup are separate steps. A configured Aria model is required to use the agent.</p></div>
+      <ol class="connection-steps">
+        <li><span class="connection-number">01</span><div><h3>Install and verify the skill</h3><p>Enter each command separately in your Aria Code session.</p><div class="command-row"><code id="install-command">/skills add artheras/aria-plugins</code><button class="copy-command" type="button" data-copy="install-command" aria-label="Copy skill installation command">Copy</button></div><div class="command-row"><code id="verify-command">/skills doctor</code><button class="copy-command" type="button" data-copy="verify-command" aria-label="Copy skill verification command">Copy</button></div></div></li>
+        <li><span class="connection-number">02</span><div><h3>Connect the Go MCP tools</h3><p>Build and start the Commerce service. Register the MCP bridge using its absolute binary path and the same merchant token.</p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/aria-code.md#3-register-the-mcp-tools" target="_blank" rel="noopener">View configuration steps ↗</a></div></li>
+        <li><span class="connection-number">03</span><div><h3>Ask Aria for a draft</h3><div class="command-row"><code id="request-command">$commerce:commerce Draft an order for 2 tees and 1 mug.</code><button class="copy-command" type="button" data-copy="request-command" aria-label="Copy example Aria request">Copy</button></div><p>Open the returned order in the browser. You control approval, checkout, and payment.</p></div></li>
+      </ol>
+      <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="modules"><div><p class="eyebrow">BUILT TO REUSE</p><h2>One workflow. <br>Four independent pieces.</h2></div><div class="module"><span>01</span><h3>Agents</h3><p>Turn a request into catalogue selections.</p></div><div class="module"><span>02</span><h3>Approvals</h3><p>Bind a human decision to an exact invoice.</p></div><div class="module"><span>03</span><h3>Payments</h3><p>Create, capture, and verify Sandbox payments.</p></div><div class="module"><span>04</span><h3>Storage</h3><p>Keep orders and their decision history.</p></div></section>
   </main>
-  <footer><a class="wordmark" href="/">Aria Plugins</a><p>Small modules. Useful work.</p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture ↗</a></footer>
+  <footer><a class="wordmark" href="/">Aria Commerce</a><p>A plugin from <a href="https://github.com/artheras/aria-plugins" target="_blank" rel="noopener">Aria Plugins ↗</a></p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture ↗</a></footer>
   <dialog id="login-dialog"><form id="login-form"><p class="eyebrow">MERCHANT SESSION</p><h2>Connect your store.</h2><p class="fine">Enter the merchant token configured on this server. It stays in this session and is not saved in browser storage.</p><label for="token">Merchant token</label><input id="token" type="password" autocomplete="off" required><p id="login-error" role="alert"></p><div class="dialog-actions"><button id="close-login" type="button" class="quiet">Cancel</button><button class="primary" type="submit">Connect →</button></div></form></dialog>
 </body>
 </html>
