@@ -47,10 +47,10 @@ func New(c Config) *Server {
 		c.Logger = slog.Default()
 	}
 	s := &Server{config: c, mux: http.NewServeMux(), logger: c.Logger, limiter: limits.Limiter{Store: c.Store}, service: NewService(c)}
-	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]string{"status": "ok", "mode": c.Mode})
 	})
-	s.mux.HandleFunc("GET /readyz", s.ready)
+	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]any{"mode": c.Mode, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"agents", "approvals", "payments", "commerce"}})
 	})

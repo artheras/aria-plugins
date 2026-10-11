@@ -84,10 +84,18 @@ The MCP surface remains catalogue, draft, and order status. Human approval, chec
 
 ## Operations and limits
 
-`/healthz` is process liveness. `/readyz` checks shared quota storage read/write access with a short timeout; it does not call AI or PayPal. JSON request logs include server-generated `request_id`, matched route, method, status, and duration. Payment failure logs add order and operation IDs. Logs omit prompts, headers, credentials, request bodies, and URL queries.
+`/api/health` is process liveness. `/api/ready` checks shared quota storage read/write access with a short timeout; it does not call AI or PayPal. JSON request logs include server-generated `request_id`, matched route, method, status, and duration. Payment failure logs add order and operation IDs. Logs omit prompts, headers, credentials, request bodies, and URL queries.
 
 Shared limits default to 10 drafts per owner/minute, 120 globally/minute, 500 globally/UTC day, and 50 per owner/UTC day. Invalid or failed draft attempts consume capacity conservatively. These count requests, not billed tokens or currency. Payment actions are capped at 30 per owner/minute. Login attempts are limited by the direct network peer; forwarded headers are not trusted. Behind Cloud Run's proxy this may group clients, so also configure an authenticated front door or edge rate controls appropriate to your ingress topology before public merchant use.
 
 Quota storage failure rejects the request before an external draft call. `429` includes `Retry-After`. Errors preserve the existing `error` string and add `code`, `retryable`, and `request_id`.
 
 Create Cloud Logging alerts for recovery failures, scan-limit hits, repeated provider errors, and sustained 429/503 responses. Configure database backups/retention. No live Cloud Run, Firestore, IAM, Scheduler, AI, or PayPal changes were executed by this implementation. Local protocol fakes and failure tests do not prove live configuration.
+
+## Demo deployment snapshot — 2026-10-11
+
+The independent `aria-commerce` Demo is deployed in `arthera-prod/europe-west2`. It uses the dedicated `aria-commerce` Firestore database, a database-scoped runtime IAM condition, and a Secret Manager session secret. Public invocation was explicitly approved. The existing Aria relay was not updated.
+
+The `aria-commerce-reconcile` Job uses 512 MiB memory and has completed successfully. Cloud Scheduler invokes it every five minutes using a dedicated OAuth service account with invoker permission on that job. The live simulated order flow passed session creation, USD 60.00 drafting, approval, checkout, capture, receipt and duplicate-capture checks. Invalid CSRF and capture before approval were rejected. These checks use the demo parser and simulated payments; they do not validate real AI, PayPal credentials, webhooks, or recovery of an actual provider failure.
+
+Use `/api/health` and `/api/ready` on Cloud Run: the platform reserves some paths ending in `z`, including the previously used liveness path. See [Cloud Run reserved URL paths](https://docs.cloud.google.com/run/docs/known-issues#reserved-url-paths).

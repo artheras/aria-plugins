@@ -56,7 +56,7 @@ func (unavailableStore) CAS(context.Context, string, []byte, []byte) error {
 func TestReadinessDistinguishesLivenessAndUnavailableStorage(t *testing.T) {
 	c := Config{Mode: "demo", Store: unavailableStore{}, Drafter: agents.Demo{}, Payments: payments.Demo{}}
 	s := New(c)
-	for path, status := range map[string]int{"/healthz": 200, "/readyz": 503} {
+	for path, status := range map[string]int{"/api/health": 200, "/api/ready": 503} {
 		w := httptest.NewRecorder()
 		s.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
 		if w.Code != status {
