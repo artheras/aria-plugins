@@ -12,18 +12,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	workflow "github.com/artheras/aria-plugins/packages/commerce"
+	"github.com/artheras/aria-plugins/packages/limits"
 	"io"
 	"io/fs"
+	"log/slog"
+	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/artheras/aria-plugins/packages/approvals"
-	"github.com/artheras/aria-plugins/packages/payments"
 	"github.com/artheras/aria-plugins/packages/sdk"
-	"github.com/artheras/aria-plugins/packages/store"
 )
 
 //go:embed web/*
@@ -35,15 +35,22 @@ var Catalog = []sdk.Product{
 }
 
 type Server struct {
-	config Config
-	mux    *http.ServeMux
+	config  Config
+	mux     *http.ServeMux
+	service *workflow.Service
+	limiter limits.Limiter
+	logger  *slog.Logger
 }
 
 func New(c Config) *Server {
-	s := &Server{config: c, mux: http.NewServeMux()}
+	if c.Logger == nil {
+		c.Logger = slog.Default()
+	}
+	s := &Server{config: c, mux: http.NewServeMux(), logger: c.Logger, limiter: limits.Limiter{Store: c.Store}, service: NewService(c)}
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]string{"status": "ok", "mode": c.Mode})
 	})
+	s.mux.HandleFunc("GET /readyz", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]any{"mode": c.Mode, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"agents", "approvals", "payments", "commerce"}})
 	})
@@ -62,6 +69,19 @@ func New(c Config) *Server {
 	return s
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	requestID := randomID()
+	w.Header().Set("X-Request-ID", requestID)
+	wrapped := &responseLog{ResponseWriter: w, status: 200}
+	w = wrapped
+	r = r.WithContext(workflow.WithRequestID(r.Context(), requestID))
+	defer func() {
+		route := r.Pattern
+		if route == "" {
+			route = "unmatched"
+		}
+		s.logger.InfoContext(r.Context(), "http_request", "request_id", requestID, "route", route, "method", r.Method, "status", wrapped.status, "duration_ms", time.Since(start).Milliseconds())
+	}()
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "same-origin")
 	w.Header().Set("X-Frame-Options", "DENY")
@@ -83,7 +103,24 @@ func write(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func fail(w http.ResponseWriter, status int, message string) {
-	write(w, status, map[string]string{"error": message})
+	code := "request_failed"
+	switch status {
+	case 400:
+		code = "invalid_request"
+	case 401:
+		code = "authentication_required"
+	case 403:
+		code = "permission_denied"
+	case 404:
+		code = "not_found"
+	case 409:
+		code = "state_conflict"
+	case 429:
+		code = "rate_limited"
+	case 503:
+		code = "service_unavailable"
+	}
+	write(w, status, map[string]any{"error": message, "code": code, "retryable": status == 429 || status >= 500, "request_id": w.Header().Get("X-Request-ID")})
 }
 func decode(r *http.Request, value any) error {
 	d := json.NewDecoder(r.Body)
@@ -183,6 +220,13 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	peer, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		peer = r.RemoteAddr
+	}
+	if !s.quota(w, r, "login", peer, s.config.loginLimit(), time.Minute) {
+		return
+	}
 	var body struct {
 		Token string `json:"token"`
 	}
@@ -197,41 +241,24 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	id := s.setSession(w, s.merchantOwner())
 	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf})
 }
-func event(order *sdk.Order, action, detail string) {
-	order.Events = append(order.Events, sdk.Event{At: time.Now().UTC().Format(time.RFC3339), Action: action, Detail: detail})
-}
 func public(order sdk.Order) sdk.Order { order.Owner = ""; order.WebhookIDs = nil; return order }
+
+// Kept for compatibility with internal tests; business behavior is in the service.
 func (s *Server) load(ctx context.Context, id, owner string) (sdk.Order, []byte, error) {
-	raw, err := s.config.Store.Get(ctx, id)
-	if err != nil {
-		return sdk.Order{}, nil, err
-	}
-	var order sdk.Order
-	if json.Unmarshal(raw, &order) != nil {
-		return order, nil, errors.New("stored order is invalid")
-	}
-	if owner != "" && order.Owner != owner {
-		return sdk.Order{}, nil, store.ErrNotFound
-	}
-	return order, raw, nil
+	return s.service.Load(ctx, id, owner)
 }
-func (s *Server) save(ctx context.Context, order sdk.Order, expected []byte) error {
-	raw, err := json.Marshal(order)
-	if err != nil {
-		return err
-	}
-	return s.config.Store.CAS(ctx, order.ID, expected, raw)
+func (s *Server) save(ctx context.Context, o sdk.Order, expected []byte) error {
+	return s.service.Save(ctx, o, expected)
 }
 func respondError(w http.ResponseWriter, err error) {
-	switch {
-	case errors.Is(err, store.ErrNotFound):
-		fail(w, 404, "order not found")
-	case errors.Is(err, store.ErrConflict):
-		fail(w, 409, err.Error())
-	default:
-		fail(w, 502, err.Error())
+	var e *workflow.Error
+	if errors.As(err, &e) {
+		write(w, e.Status, map[string]any{"error": e.Message, "code": e.Code, "retryable": e.Retryable, "request_id": w.Header().Get("X-Request-ID")})
+		return
 	}
+	fail(w, 503, "Service temporarily unavailable. Retry with the same order.")
 }
+func actor(id identity) workflow.Actor { return workflow.Actor{Owner: id.owner, Human: !id.bearer} }
 func (s *Server) draft(w http.ResponseWriter, r *http.Request) {
 	id, ok := s.authorize(w, r, false)
 	if !ok {
@@ -244,19 +271,11 @@ func (s *Server) draft(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "prompt must contain 3 to 2000 characters")
 		return
 	}
-	draft, err := s.config.Drafter.Draft(r.Context(), body.Prompt, Catalog)
-	if err != nil {
-		fail(w, 422, err.Error())
+	if !s.quota(w, r, "draft-global-day", "all", s.config.dailyLimit(), 24*time.Hour) || !s.quota(w, r, "draft-global-minute", "all", s.config.globalLimit(), time.Minute) || !s.quota(w, r, "draft-owner-minute", id.owner, s.config.draftLimit(), time.Minute) || !s.quota(w, r, "draft-owner-day", id.owner, s.config.ownerDailyLimit(), 24*time.Hour) {
 		return
 	}
-	invoice, err := sdk.BuildInvoice(randomID(), draft.Items, Catalog)
+	order, err := s.service.Draft(r.Context(), actor(id), body.Prompt)
 	if err != nil {
-		fail(w, 422, err.Error())
-		return
-	}
-	order := sdk.Order{Invoice: invoice, Owner: id.owner, State: "draft", Summary: draft.Summary, CreatedAt: time.Now().UTC().Format(time.RFC3339), Digest: approvals.Digest(invoice)}
-	event(&order, "draft_created", s.config.Drafter.Name()+"; prices resolved from server catalogue")
-	if err = s.save(r.Context(), order, nil); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -303,21 +322,8 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid approval request")
 		return
 	}
-	order, raw, err := s.load(r.Context(), r.PathValue("id"), id.owner)
+	order, err := s.service.Approve(r.Context(), actor(id), r.PathValue("id"), body.Digest)
 	if err != nil {
-		respondError(w, err)
-		return
-	}
-	if err = approvals.Approve(&order, body.Digest, time.Now()); err != nil {
-		fail(w, 409, err.Error())
-		return
-	}
-	if order.State == "approved" {
-		if len(order.Events) == 1 {
-			event(&order, "human_approved", "User confirmed the exact invoice snapshot")
-		}
-	}
-	if err = s.save(r.Context(), order, raw); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -328,33 +334,11 @@ func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	order, raw, err := s.load(r.Context(), r.PathValue("id"), id.owner)
+	if !s.quota(w, r, "payment-action", id.owner, 30, time.Minute) {
+		return
+	}
+	order, err := s.service.Checkout(r.Context(), actor(id), r.PathValue("id"))
 	if err != nil {
-		respondError(w, err)
-		return
-	}
-	if order.State == "awaiting_payment" || order.State == "paid" {
-		write(w, 200, public(order))
-		return
-	}
-	if order.State != "approved" {
-		fail(w, 409, "approve the draft before checkout")
-		return
-	}
-	if err = approvals.Check(order, time.Now()); err != nil {
-		fail(w, 409, err.Error())
-		return
-	}
-	returnURL := s.config.PublicURL + "/?order=" + url.QueryEscape(order.ID)
-	payment, err := s.config.Payments.Create(r.Context(), order.Invoice, returnURL, returnURL+"&cancelled=1")
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-	order.Payment = &payment
-	order.State = "awaiting_payment"
-	event(&order, "checkout_created", s.config.Payments.Name()+" order "+payment.OrderID+"; idempotent create request")
-	if err = s.save(r.Context(), order, raw); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -365,36 +349,11 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	order, raw, err := s.load(r.Context(), r.PathValue("id"), id.owner)
+	if !s.quota(w, r, "payment-action", id.owner, 30, time.Minute) {
+		return
+	}
+	order, err := s.service.Capture(r.Context(), actor(id), r.PathValue("id"))
 	if err != nil {
-		respondError(w, err)
-		return
-	}
-	if order.State == "paid" {
-		write(w, 200, public(order))
-		return
-	}
-	if order.State != "awaiting_payment" || order.Payment == nil || order.ApprovedDigest != approvals.Digest(order.Invoice) {
-		fail(w, 409, "checkout and exact invoice approval required")
-		return
-	}
-	payment, err := s.config.Payments.Capture(r.Context(), order.Invoice, order.Payment.OrderID)
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-	if payment.OrderID != order.Payment.OrderID {
-		fail(w, 502, "payment order identity mismatch")
-		return
-	}
-	if err = payments.Validate(order.Invoice, payment); err != nil {
-		respondError(w, err)
-		return
-	}
-	order.Payment = &payment
-	order.State = "paid"
-	event(&order, "payment_reconciled", s.config.Payments.Name()+"; capture "+payment.CaptureID+" matched currency and amount")
-	if err = s.save(r.Context(), order, raw); err != nil {
 		respondError(w, err)
 		return
 	}
@@ -403,53 +362,47 @@ func (s *Server) capture(w http.ResponseWriter, r *http.Request) {
 func (s *Server) webhook(w http.ResponseWriter, r *http.Request) {
 	raw, err := io.ReadAll(r.Body)
 	if err != nil {
-		fail(w, 400, "invalid webhook body")
+		fail(w, 400, "Invalid webhook body.")
 		return
 	}
-	hook, err := s.config.Payments.Verify(r.Context(), r.Header, raw)
-	if err != nil {
-		fail(w, 400, err.Error())
-		return
-	}
-	if hook.OrderID == "" {
-		write(w, 200, map[string]string{"status": "ignored"})
-		return
-	}
-	snapshot, err := s.config.Payments.Inspect(r.Context(), hook.OrderID)
+	result, err := s.service.Webhook(r.Context(), r.Header, raw)
 	if err != nil {
 		respondError(w, err)
 		return
 	}
-	order, expected, err := s.load(r.Context(), snapshot.InvoiceID, "")
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-	if order.Payment == nil || order.Payment.OrderID != hook.OrderID || order.ApprovedDigest != approvals.Digest(order.Invoice) {
-		fail(w, 409, "webhook does not match an approved checkout")
-		return
-	}
-	if err = payments.Validate(order.Invoice, snapshot.Payment); err != nil {
-		respondError(w, err)
-		return
-	}
-	for _, id := range order.WebhookIDs {
-		if id == hook.ID {
-			write(w, 200, map[string]string{"status": "duplicate"})
-			return
-		}
-	}
-	if len(order.WebhookIDs) >= 100 {
-		fail(w, 409, "webhook event limit reached")
-		return
-	}
-	order.WebhookIDs = append(order.WebhookIDs, hook.ID)
-	order.Payment = &snapshot.Payment
-	order.State = "paid"
-	event(&order, "webhook_verified", "PayPal signature verified; provider capture reconciled")
-	if err = s.save(r.Context(), order, expected); err != nil {
-		fail(w, 503, "storage conflict or failure; retry webhook")
-		return
-	}
-	write(w, 200, map[string]string{"status": "reconciled"})
+	write(w, 200, map[string]string{"status": result})
 }
+func (s *Server) quota(w http.ResponseWriter, r *http.Request, scope, subject string, n int, window time.Duration) bool {
+	retry, err := s.limiter.Take(r.Context(), scope, subject, n, window)
+	if errors.Is(err, limits.ErrLimited) {
+		w.Header().Set("Retry-After", strconv.Itoa(retry))
+		fail(w, 429, "Request limit reached. Please wait before trying again.")
+		return false
+	}
+	if err != nil {
+		fail(w, 503, "Quota storage unavailable. Please try again later.")
+		return false
+	}
+	return true
+}
+func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	_, err := s.limiter.Take(ctx, "readiness", "probe", 1_000_000, time.Minute)
+	if err != nil {
+		fail(w, 503, "Storage is not ready.")
+		return
+	}
+	write(w, 200, map[string]string{"status": "ready"})
+}
+
+type responseLog struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *responseLog) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+func (w *responseLog) Unwrap() http.ResponseWriter { return w.ResponseWriter }

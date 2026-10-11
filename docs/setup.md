@@ -95,3 +95,11 @@ The [Redis REST adapter](https://upstash.com/docs/redis/features/restapi) stores
 If deployment protection is enabled, PayPal must be able to reach the webhook URL; verify access before subscribing. Use stable production URLs for return links, cookies, and Origin validation. A preview URL with a different origin needs its own PUBLIC_URL.
 
 No Commerce Vercel deployment or cloud resource was created as part of the credential-free implementation. Go build configuration is supplied; cloud build, Redis connectivity, and PayPal delivery require deployment verification.
+
+## 7. Google Cloud Run
+
+The primary hosted backend target is Cloud Run. Follow [Cloud Run service and recovery job](cloud-run.md) for the dedicated Firestore namespace, service-account authentication, Secret Manager settings, Cloud Build image, recovery job, and Scheduler configuration. This does not alter the existing Aria relay service. Local file persistence is rejected in Cloud Run. Private Cloud Run MCP invocation optionally uses `ARIA_CLOUD_RUN_AUDIENCE` with an ADC ID-token source and a separate merchant credential.
+
+## 8. Shared request limits and errors
+
+See `.env.example` for the draft/login limit settings. Limits persist across instances, reject on storage failure, and count attempted requests before provider work. Rate limits return `429` and `Retry-After`. Errors retain `error` and add `code`, `retryable`, and `request_id`. Pending payment operations are shown in the browser; keep the same order ID while recovery inspects the result.

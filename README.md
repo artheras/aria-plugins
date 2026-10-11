@@ -48,7 +48,7 @@ Edit skills inside their plugin, then run `make catalog-sync`. Commit the genera
 
 ## Try locally
 
-Go 1.26 or newer; no third-party Go dependencies.
+Go 1.26 or newer. Google's official Go SDK provides Firestore persistence and optional Cloud Run identity tokens.
 
 ```sh
 git clone https://github.com/artheras/aria-plugins.git
@@ -69,12 +69,15 @@ Default demo mode uses a small deterministic parser and simulated payment. It ma
 | --- | --- |
 | apps/commerce | HTTP workflow and embedded HTML/CSS/JavaScript interface |
 | cmd/server | Go service entrypoint |
+| cmd/commerce-worker | Bounded recovery job for persisted payment intents |
+| packages/commerce | Transport-independent order workflow and recovery |
+| packages/limits | Shared atomic request quotas |
 | cmd/commerce-mcp | Go MCP stdio adapter: catalogue, draft, status |
 | packages/sdk | Shared invoice, catalogue, payment, and audit contracts |
 | packages/agents | Demo parser and AI Gateway HTTP adapter |
 | packages/approvals | Exact-invoice approval digest and expiry |
 | packages/payments | Provider interface, demo provider, PayPal Sandbox implementation |
-| packages/store | Atomic file persistence and Redis REST compare-and-swap |
+| packages/store | Atomic file, Redis REST and Firestore compare-and-swap |
 | plugins/commerce | Installable workflow, host manifests and MCP configuration |
 | skills / .claude-plugin | Aria-compatible catalogue discovery and integrity |
 | packages/catalog / cmd/catalog | Go catalogue validation and mirror generation |
@@ -85,6 +88,7 @@ Plugin names such as `commerce` are stable identifiers; change `displayName` for
 
 ## Configure and validate
 
+- [Google Cloud Run service and recovery job](docs/cloud-run.md)
 - [Setup: PayPal, AI Gateway, MCP, Docker, Vercel](docs/setup.md)
 - [Commerce quickstart](docs/quickstart.md)
 - [Connect to Aria Code](docs/aria-code.md)
@@ -96,6 +100,6 @@ Plugin names such as `commerce` are stable identifiers; change `displayName` for
 make test
 ```
 
-This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Redis. MIT licensed.
+This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Firestore or Redis. Cloud Run defaults to Firestore. MIT licensed.
 
 **Verification limits:** the credential-free demo and mock providers are tested locally. Real AI Gateway calls, PayPal Sandbox transactions, webhook delivery, a full interactive Aria/Claude agent session, and Commerce cloud deployment still require configuration and live validation. The Aria Code marketing site is a separate project.

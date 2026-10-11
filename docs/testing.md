@@ -51,3 +51,11 @@ The 0.2.0 catalogue was checked against unmodified Aria Code modules from commit
 - The Go catalogue generator produced a mirror and lock accepted by the Aria loader. `make catalog-check` and all race-detected Go tests passed.
 
 This checks the real loader and transport modules. It does not prove a model selects the skill/tools correctly in a full interactive session, a Claude installation succeeds, or real AI/payment providers work.
+
+## Service hardening coverage
+
+Fault tests verify that intent-write failure prevents provider calls; a completed capture followed by a failed result write is recovered after service reconstruction without a second capture; checkout response loss retries the same intent; expired approval is marked for review; and a recovery worker never initiates an unpaid Sandbox capture. Shared quota concurrency, window reset, cross-instance enforcement, typed HTTP errors, secret-free request logs, dependency readiness, Cloud Run file rejection, worker credential minimisation, and separate Google/merchant identity headers are covered.
+
+The actual Firestore Go SDK is exercised against a local gRPC protocol fake for read/create/CAS conflicts and separate quota collections. This is not a live Firestore deployment or a Firestore emulator verification. Real IAM permissions, transactions under production load, job/Scheduler execution, and private Cloud Run ID-token minting require live validation.
+
+The 0.3.0 bundle retains the same three-tool MCP surface and catalogue format. The compatibility check is rerun against the pinned Aria loader/registry modules when validating this bundle; it does not claim a full model-driven agent session.
