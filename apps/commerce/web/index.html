@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Aria Commerce: draft, review, pay, and reconcile orders with reusable Go plugins.">
+  <title>Aria Commerce — Aria Plugins</title><link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/">Aria Plugins</a>
+    <nav aria-label="Main navigation"><a href="https://github.com/artheras/aria-plugins/blob/main/docs/setup.md" target="_blank" rel="noopener">Setup guide ↗</a><a href="https://github.com/artheras/aria-plugins" target="_blank" rel="noopener">GitHub ↗</a><button id="connect" class="quiet" hidden>Merchant session</button></nav>
+  </header>
+  <main>
+    <section class="hero"><div><p class="eyebrow">ARIA COMMERCE · BUILT WITH GO</p><h1>A request.<br>A reviewed order.<br>A verified payment.</h1><p class="intro">Let Aria prepare the details.<br>You decide what happens next.</p></div>
+      <aside class="hero-note"><span class="label">THE WORKFLOW</span><p>Reusable agent, approval, and payment modules. One small store to try them together.</p><a href="#workspace">Try an order <span aria-hidden="true">↓</span></a></aside>
+    </section>
+    <div class="mode-banner" id="mode"><span class="dot"></span><span id="mode-text">Connecting to the commerce service…</span></div>
+    <ol class="steps" aria-label="Order progress"><li data-stage="draft"><span>01</span> Draft</li><li data-stage="approved"><span>02</span> Review & approve</li><li data-stage="awaiting_payment"><span>03</span> Checkout</li><li data-stage="paid"><span>04</span> Reconcile</li></ol>
+    <section id="workspace" class="workspace">
+      <div class="request-pane">
+        <div class="section-title"><p class="eyebrow">01 / YOUR REQUEST</p><span class="small-label">USD catalogue</span></div>
+        <h2>What would you like<br>to order?</h2>
+        <div id="catalog" class="catalog" aria-label="Available products"></div>
+        <form id="draft-form">
+          <label for="prompt">Describe your order</label>
+          <textarea id="prompt" name="prompt" maxlength="2000" required rows="4">Create an order for 2 cotton tees and 1 ceramic mug.</textarea>
+          <button type="button" class="example" id="example">Try: 3 caps and 2 mugs ↗</button>
+          <button class="primary full" id="draft-button" type="submit">Create order draft <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="fine" id="drafter-note"></p>
+      </div>
+      <div class="order-pane">
+        <div class="section-title"><p class="eyebrow">02 / ORDER REVIEW</p><span class="state" id="state">Ready when you are</span></div>
+        <div id="empty"><span class="empty-symbol" aria-hidden="true">↗</span><h2>Start with a request.</h2><p>Your items, quantities, and total will appear here before anything is approved.</p><div class="empty-rule"></div><span class="fine">Prices always come from the server catalogue.</span></div>
+        <div id="order-content" hidden>
+          <p id="summary" class="summary"></p><p class="order-id" id="order-id"></p>
+          <div class="table-scroll"><table><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody id="items"></tbody></table></div>
+          <div class="total"><span>Order total <small>USD</small></span><strong id="total"></strong></div>
+          <p id="payment-info" class="fine"></p>
+          <div id="actions" class="actions">
+            <button class="primary full" id="approve" hidden>Approve this exact order <span aria-hidden="true">→</span></button>
+            <button class="primary full" id="checkout" hidden>Create checkout <span aria-hidden="true">→</span></button>
+            <a class="primary full" id="paypal-link" hidden target="_blank" rel="noopener">Open PayPal Sandbox ↗</a>
+            <button class="primary full" id="capture" hidden>Verify payment</button>
+            <a class="secondary full" id="receipt" hidden>Download receipt <span aria-hidden="true">↓</span></a>
+          </div>
+          <p id="action-note" class="fine"></p>
+        </div>
+      </div>
+    </section>
+    <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+    <section class="audit-section">
+      <div><p class="eyebrow">03 / ACTIVITY</p><h2>A record of<br>every decision.</h2><p class="fine">Stored on the server.<br>Available after a refresh.</p><button id="refresh" class="quiet" hidden>Refresh order ↻</button></div>
+      <ol id="audit" class="audit"><li class="audit-placeholder">Create a draft to begin the activity record.</li></ol>
+    </section>
+    <section class="modules"><div><p class="eyebrow">BUILT TO REUSE</p><h2>One workflow.<br>Four independent pieces.</h2></div><div class="module"><span>01</span><h3>Agents</h3><p>Turn a request into catalogue selections.</p></div><div class="module"><span>02</span><h3>Approvals</h3><p>Bind a human decision to an exact invoice.</p></div><div class="module"><span>03</span><h3>Payments</h3><p>Create, capture, and verify Sandbox payments.</p></div><div class="module"><span>04</span><h3>Storage</h3><p>Keep orders and their decision history.</p></div></section>
+  </main>
+  <footer><a class="wordmark" href="/">Aria Plugins</a><p>Small modules. Useful work.</p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture ↗</a></footer>
+  <dialog id="login-dialog"><form id="login-form"><p class="eyebrow">MERCHANT SESSION</p><h2>Connect your store.</h2><p class="fine">Enter the merchant token configured on this server. It stays in this session and is not saved in browser storage.</p><label for="token">Merchant token</label><input id="token" type="password" autocomplete="off" required><p id="login-error" role="alert"></p><div class="dialog-actions"><button id="close-login" type="button" class="quiet">Cancel</button><button class="primary" type="submit">Connect →</button></div></form></dialog>
+</body>
+</html>

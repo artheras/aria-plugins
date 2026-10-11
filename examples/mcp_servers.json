@@ -1,0 +1,15 @@
+{
+  "servers": [
+    {
+      "name": "aria-commerce",
+      "command": "${ARIA_COMMERCE_MCP_BIN}",
+      "args": [],
+      "env": {
+        "ARIA_COMMERCE_URL": "${ARIA_COMMERCE_URL}",
+        "ARIA_MERCHANT_TOKEN": "${ARIA_MERCHANT_TOKEN}"
+      },
+      "description": "Go Commerce: catalogue, drafts, and status. Human payment actions stay in the browser.",
+      "enabled": true
+    }
+  ]
+}
