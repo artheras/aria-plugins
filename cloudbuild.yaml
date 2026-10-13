@@ -1,0 +1,13 @@
+# Commerce image only. Deploying or promoting the existing Aria relay is separate.
+steps:
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    args: [build, '--tag=${_IMAGE}:${COMMIT_SHA}', .]
+  - id: Push
+    name: gcr.io/cloud-builders/docker
+    args: [push, '${_IMAGE}:${COMMIT_SHA}']
+images:
+  - '${_IMAGE}:${COMMIT_SHA}'
+options:
+  logging: CLOUD_LOGGING_ONLY
+# Supply _IMAGE as your existing Artifact Registry repository's Commerce image path.

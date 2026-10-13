@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 	"io"
 	"net/http"
 	"net/url"
@@ -25,6 +27,7 @@ type rpcRequest struct {
 }
 type bridge struct {
 	base, token string
+	idTokens    oauth2.TokenSource
 	client      *http.Client
 }
 
@@ -40,6 +43,13 @@ func (b bridge) request(ctx context.Context, method, path string, body any) (str
 	}
 	req.Header.Set("Authorization", "Bearer "+b.token)
 	req.Header.Set("Content-Type", "application/json")
+	if b.idTokens != nil {
+		token, err := b.idTokens.Token()
+		if err != nil {
+			return "", errors.New("Cloud Run identity unavailable")
+		}
+		req.Header.Set("X-Serverless-Authorization", "Bearer "+token.AccessToken)
+	}
 	res, err := b.client.Do(req)
 	if err != nil {
 		return "", errors.New("commerce service unavailable")
@@ -136,7 +146,7 @@ func (b bridge) result(req rpcRequest) (any, *rpcError) {
 		if p.Protocol != "2024-11-05" && p.Protocol != "2025-06-18" {
 			p.Protocol = "2025-06-18"
 		}
-		return map[string]any{"protocolVersion": p.Protocol, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "aria-commerce", "version": "0.1.0"}}, nil
+		return map[string]any{"protocolVersion": p.Protocol, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "aria-commerce", "version": "0.2.0"}}, nil
 	case "ping":
 		return map[string]any{}, nil
 	case "tools/list":
@@ -197,6 +207,18 @@ func main() {
 		os.Exit(1)
 	}
 	b := bridge{base: base, token: token, client: &http.Client{Timeout: 55 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	if audience := os.Getenv("ARIA_CLOUD_RUN_AUDIENCE"); audience != "" {
+		a, e := url.Parse(audience)
+		if e != nil || a.Scheme != "https" || a.Host == "" || a.User != nil || a.RawQuery != "" || a.Fragment != "" {
+			fmt.Fprintln(os.Stderr, "ARIA_CLOUD_RUN_AUDIENCE must be the HTTPS Cloud Run service audience")
+			os.Exit(1)
+		}
+		b.idTokens, err = idtoken.NewTokenSource(context.Background(), audience)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "configure ADC or an impersonated service account with Cloud Run invocation permission")
+			os.Exit(1)
+		}
+	}
 	if err = serve(os.Stdin, os.Stdout, b); err != nil {
 		fmt.Fprintln(os.Stderr, "MCP transport stopped")
 		os.Exit(1)

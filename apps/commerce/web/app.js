@@ -37,11 +37,12 @@ function render() {
   ['approve','checkout','capture','paypal-link','receipt'].forEach(id=>$(id).hidden=true);
   $('approve').hidden=order.state!=='draft'; $('checkout').hidden=order.state!=='approved';
   const notes={draft:'Review each item and the total. Approval applies only to this invoice.',approved:'Approved. Checkout can now be created for this invoice.',awaiting_payment:config.mode==='demo'?'Simulate a completed payment to test reconciliation. No money moves.':'Complete approval in PayPal Sandbox, then return here and verify the payment.',paid:config.mode==='demo'?'Simulation complete. This receipt is clearly labelled as demo data.':'PayPal capture verified against the approved invoice.'};
-  $('action-note').textContent=notes[order.state] || '';
+  $('action-note').textContent=order.operation?(order.operation.needs_review?'This payment operation needs merchant review. Keep the same order ID.':'A payment operation is being reconciled. Refresh this order shortly.'):notes[order.state] || '';
   if(order.state==='awaiting_payment') {
     $('capture').hidden=false; $('capture').textContent=config.mode==='demo'?'Simulate payment & reconcile →':'Capture & verify Sandbox payment →';
     if(order.payment && order.payment.checkout_url) { $('paypal-link').hidden=false; $('paypal-link').href=order.payment.checkout_url; }
   }
+  if(order.operation) { $('checkout').hidden=true;$('capture').hidden=true; }
   if(order.state==='paid') { $('receipt').hidden=false; $('receipt').href='/api/orders/'+order.id+'/receipt'; }
   $('payment-info').textContent=order.payment?'Provider: '+order.payment.provider+' · '+order.payment.order_id:'No payment has been created.';
   const stages=['draft','approved','awaiting_payment','paid'], current=stages.indexOf(order.state);

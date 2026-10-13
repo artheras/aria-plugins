@@ -41,18 +41,30 @@ type Event struct {
 	Action string `json:"action"`
 	Detail string `json:"detail"`
 }
+
+// Operation is persisted in the same CAS record as its immutable invoice.
+type Operation struct {
+	ID            string `json:"id"`
+	Kind          string `json:"kind"`
+	StartedAt     string `json:"started_at"`
+	NextAttemptAt string `json:"next_attempt_at"`
+	Attempts      int    `json:"attempts"`
+	LastCode      string `json:"last_code,omitempty"`
+	NeedsReview   bool   `json:"needs_review,omitempty"`
+}
 type Order struct {
 	Invoice
-	Owner          string   `json:"owner,omitempty"`
-	State          string   `json:"state"`
-	Summary        string   `json:"summary"`
-	CreatedAt      string   `json:"created_at"`
-	Digest         string   `json:"digest"`
-	ApprovedDigest string   `json:"approved_digest,omitempty"`
-	ApprovedAt     string   `json:"approved_at,omitempty"`
-	Payment        *Payment `json:"payment,omitempty"`
-	Events         []Event  `json:"events"`
-	WebhookIDs     []string `json:"webhook_ids,omitempty"`
+	Owner          string     `json:"owner,omitempty"`
+	State          string     `json:"state"`
+	Summary        string     `json:"summary"`
+	CreatedAt      string     `json:"created_at"`
+	Digest         string     `json:"digest"`
+	ApprovedDigest string     `json:"approved_digest,omitempty"`
+	ApprovedAt     string     `json:"approved_at,omitempty"`
+	Payment        *Payment   `json:"payment,omitempty"`
+	Events         []Event    `json:"events"`
+	Operation      *Operation `json:"operation,omitempty"`
+	WebhookIDs     []string   `json:"webhook_ids,omitempty"`
 }
 
 // BuildInvoice trusts only the server's catalogue for currency and prices.

@@ -2,7 +2,7 @@
 
 An Aria Code workflow that reads a merchant catalogue, prepares an order draft, and reports order status through the Go Commerce MCP bridge. The user reviews and pays in the merchant browser session.
 
-Version: **0.2.0**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, credential-free simulation. PayPal Sandbox and AI Gateway require credentials.
+Version: **0.3.0**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, credential-free simulation. PayPal Sandbox and AI Gateway require credentials.
 
 | Component | Purpose |
 | --- | --- |
@@ -18,3 +18,5 @@ In Aria Code, run `/skills add artheras/aria-plugins`, then `/skills doctor`. In
 Build the service and MCP binaries with `make build` at the repository root. The service and bridge use the same `ARIA_MERCHANT_TOKEN` and `ARIA_COMMERCE_URL`. No approval, checkout, or capture tool is exposed to the agent.
 
 The Claude manifest and .mcp.json are supplied for cross-client reuse; a full Claude Code installation has not been verified. Installing a plugin does not supply payment credentials or authorize a payment.
+
+The service delegates business rules to `packages/commerce`. A bounded Go worker recovers persisted payment intents; it does not approve or initiate Sandbox captures. Shared quotas, typed errors and structured logs are included. On Cloud Run, use the dedicated Firestore store and optional separate Google ID-token authentication described in [Cloud Run operations](../../docs/cloud-run.md).
