@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	workflow "github.com/artheras/aria-plugins/packages/commerce"
 	"log/slog"
@@ -15,12 +16,17 @@ import (
 	"time"
 
 	"github.com/artheras/aria-plugins/packages/agents"
+	merchantidentity "github.com/artheras/aria-plugins/packages/identity"
 	"github.com/artheras/aria-plugins/packages/payments"
+	"github.com/artheras/aria-plugins/packages/products"
+	"github.com/artheras/aria-plugins/packages/sdk"
 	"github.com/artheras/aria-plugins/packages/store"
 )
 
 type Config struct {
 	Mode, PublicURL, SessionSecret, MerchantToken, DataDir                          string
+	MerchantID, LegacyMerchantOwner, CatalogFile                                    string
+	Catalog                                                                         []sdk.Product
 	Drafter                                                                         agents.Drafter
 	Payments                                                                        payments.Provider
 	Store                                                                           store.Store
@@ -35,6 +41,24 @@ func FromEnvironment() (Config, error) { return fromEnvironment(false) }
 func FromEnvironmentForWorker() (Config, error) { return fromEnvironment(true) }
 func fromEnvironment(worker bool) (Config, error) {
 	c := Config{Mode: os.Getenv("ARIA_MODE"), PublicURL: os.Getenv("PUBLIC_URL"), SessionSecret: os.Getenv("ARIA_SESSION_SECRET"), MerchantToken: os.Getenv("ARIA_MERCHANT_TOKEN"), DataDir: os.Getenv("ARIA_DATA_DIR")}
+	c.MerchantID, c.LegacyMerchantOwner, c.CatalogFile = os.Getenv("ARIA_MERCHANT_ID"), os.Getenv("ARIA_LEGACY_MERCHANT_OWNER"), os.Getenv("ARIA_CATALOG_FILE")
+	if c.MerchantID != "" {
+		if err := merchantidentity.ValidateID(c.MerchantID); err != nil {
+			return c, err
+		}
+	}
+	if c.LegacyMerchantOwner != "" && (c.MerchantID == "" || !merchantidentity.ValidateLegacyOwner(c.LegacyMerchantOwner)) {
+		return c, errors.New("ARIA_LEGACY_MERCHANT_OWNER requires a stable merchant ID and a 64-character lowercase legacy owner hash")
+	}
+	if c.CatalogFile != "" {
+		b, err := os.ReadFile(c.CatalogFile)
+		if err != nil || len(b) > 64<<10 {
+			return c, errors.New("cannot read the configured catalogue JSON file (64 KiB maximum)")
+		}
+		if json.Unmarshal(b, &c.Catalog) != nil || products.Validate(c.Catalog) != nil {
+			return c, errors.New("configured catalogue JSON is invalid")
+		}
+	}
 	if c.Mode == "" {
 		c.Mode = "demo"
 	}
@@ -122,7 +146,7 @@ func fromEnvironment(worker bool) (Config, error) {
 	if c.Mode == "sandbox" {
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
-			required = append(required, "AI_GATEWAY_MODEL", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
+			required = append(required, "AI_GATEWAY_MODEL", "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
 		}
 		for _, key := range required {
 			if os.Getenv(key) == "" {
@@ -169,7 +193,11 @@ func fromEnvironment(worker bool) (Config, error) {
 }
 
 func NewService(c Config) *workflow.Service {
-	return &workflow.Service{Store: c.Store, Drafter: c.Drafter, Payments: c.Payments, Catalog: Catalog, PublicURL: c.PublicURL, Logger: c.Logger}
+	items := c.Catalog
+	if len(items) == 0 {
+		items = Catalog
+	}
+	return &workflow.Service{Store: c.Store, Drafter: c.Drafter, Payments: c.Payments, Catalog: items, ProductSource: products.Repository{Store: c.Store, Fallback: items}, PublicURL: c.PublicURL, Logger: c.Logger, MerchantOwner: merchantidentity.Owner(c.MerchantID), LegacyOwner: c.LegacyMerchantOwner}
 }
 func positive(value, fallback int) int {
 	if value > 0 {

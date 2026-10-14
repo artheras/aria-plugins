@@ -36,6 +36,14 @@ type Payment struct {
 	Amount      int64  `json:"amount"`
 	Currency    string `json:"currency"`
 }
+type Refund struct {
+	ID        string `json:"id,omitempty"`
+	CaptureID string `json:"capture_id"`
+	Status    string `json:"status"`
+	Amount    int64  `json:"amount"`
+	Currency  string `json:"currency"`
+	Evidence  string `json:"evidence"`
+}
 type Event struct {
 	At     string `json:"at"`
 	Action string `json:"action"`
@@ -58,10 +66,12 @@ type Order struct {
 	State          string     `json:"state"`
 	Summary        string     `json:"summary"`
 	CreatedAt      string     `json:"created_at"`
+	ExpiresAt      string     `json:"expires_at,omitempty"`
 	Digest         string     `json:"digest"`
 	ApprovedDigest string     `json:"approved_digest,omitempty"`
 	ApprovedAt     string     `json:"approved_at,omitempty"`
 	Payment        *Payment   `json:"payment,omitempty"`
+	Refund         *Refund    `json:"refund,omitempty"`
 	Events         []Event    `json:"events"`
 	Operation      *Operation `json:"operation,omitempty"`
 	WebhookIDs     []string   `json:"webhook_ids,omitempty"`

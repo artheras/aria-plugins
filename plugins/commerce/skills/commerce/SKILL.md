@@ -18,3 +18,6 @@ Available tools:
 Confirm uncertain quantities with the user. Use the catalogue as the price source. A draft is not a payment. Give the returned order ID to the user, who reviews it in the connected merchant browser session.
 
 Do not bypass browser confirmation with shell commands, HTTP requests, or another tool. Never assert money moved in demo mode. State a PayPal payment succeeded only when commerce_get_order returns paid with a reconciled Sandbox capture.
+
+
+Revisions invalidate prior approval. Cancellation applies only before checkout. Full refunds and provider status checks are browser-only. For refund_pending, refunded or payment_review states, report the current state and direct the user to the browser; never describe them as an unchanged paid order. Unknown payment/refund outcomes must retain the same order and operation identity.

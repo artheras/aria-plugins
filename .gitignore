@@ -7,3 +7,5 @@
 .vercel/
 *.test
 coverage.out
+
+dist/

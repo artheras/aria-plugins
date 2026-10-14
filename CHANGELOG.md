@@ -1,5 +1,15 @@
 # Changelog
 
+## Commerce 0.4.0
+
+- Stable merchant IDs, legacy-owner transition aliases and preview-first CAS migration.
+- Persisted trusted catalogue, bounded owned-order listing/search, encrypted pagination cursors.
+- Human invoice revision invalidates approval; unstarted cancellation, 24-hour expiry and recovery review.
+- Full Sandbox/demo refunds, provider lifecycle checks and inspection-only refund recovery.
+- Versioned MCP/installation bundles, safe config merge/backups, doctor and uninstall.
+- OpenAPI/package contracts, release CI, migration/provider-validation/operations guides.
+
+
 ## Commerce 0.3.0
 
 - Extracted transport-independent drafting, approval, checkout, capture, webhook and recovery behavior into `packages/commerce`.
@@ -12,3 +22,4 @@
 - Preserved English UI and browser-only human payment authority. MCP still exposes only catalogue, draft and order status.
 
 Live provider/cloud deployment is not implied by these changes. See `docs/testing.md` for local coverage and remaining validation.
+

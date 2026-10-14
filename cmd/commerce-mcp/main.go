@@ -112,6 +112,14 @@ func (b bridge) call(params json.RawMessage) any {
 		if args.Prompt != "" || args.OrderID != "" {
 			return toolResult("catalog accepts no arguments", true)
 		}
+		session, err := b.request(ctx, "GET", "/api/session", nil)
+		var auth struct {
+			Authenticated bool `json:"authenticated"`
+			Merchant      bool `json:"merchant"`
+		}
+		if err != nil || json.Unmarshal([]byte(session), &auth) != nil || !auth.Authenticated || !auth.Merchant {
+			return toolResult("Merchant authentication failed, or this service predates the 0.4.0 session contract.", true)
+		}
 	case "commerce_draft_order":
 		if len(args.Prompt) < 3 || len(args.Prompt) > 2000 || args.OrderID != "" {
 			return toolResult("provide a prompt of 3 to 2000 characters", true)
@@ -132,7 +140,12 @@ func (b bridge) call(params json.RawMessage) any {
 		return toolResult(err.Error(), true)
 	}
 	if call.Name == "commerce_draft_order" {
-		out += "\nReview in the merchant browser session at " + b.base + "/. No approval or payment has been made."
+		var order struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal([]byte(out), &order) == nil && len(order.ID) == 32 {
+			out += "\nReview in the merchant browser session at " + b.base + "/?order=" + order.ID + ". No approval or payment has been made."
+		}
 	}
 	return toolResult(out, false)
 }

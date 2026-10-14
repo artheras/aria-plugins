@@ -153,10 +153,11 @@ func snapshot(order paypalOrder) (Snapshot, error) {
 		if err != nil {
 			return Snapshot{}, err
 		}
-		if c.Status != "COMPLETED" || c.ID == "" || c.Amount.Currency != unit.Amount.Currency || captured != amount {
+		if (c.Status != "COMPLETED" && c.Status != "REFUNDED" && c.Status != "PARTIALLY_REFUNDED" && c.Status != "DECLINED" && c.Status != "FAILED") || c.ID == "" || c.Amount.Currency != unit.Amount.Currency || captured != amount {
 			return Snapshot{}, errors.New("PayPal capture is pending or mismatched")
 		}
 		p.CaptureID = c.ID
+		p.Status = c.Status
 	}
 	return Snapshot{InvoiceID: unit.CustomID, Payment: p}, nil
 }

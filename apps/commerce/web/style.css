@@ -9,3 +9,20 @@
 .hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:24px;margin-top:28px}.hero-secondary{font-size:13px}.hero-secondary:hover,.connection-section a:hover{text-decoration:underline}.connection-section{padding:48px 5%;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1.7fr;gap:20px 70px;scroll-margin-top:24px}.connection-intro h2{font-size:32px;margin-bottom:20px}.connection-intro>p:not(.eyebrow){font-size:13px;line-height:1.8;color:var(--muted);max-width:320px}.connection-intro>a,.connection-steps a{font-size:12px}.connection-steps{list-style:none;padding:0;margin:0;min-width:0}.connection-steps li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:16px;padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--line)}.connection-steps li:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}.connection-number{font-size:10px;color:var(--muted);padding-top:4px}.connection-steps h3{font-size:16px;font-weight:500;margin:0 0 10px}.connection-steps p{font-size:12px;color:var(--muted);line-height:1.7;margin:10px 0}.command-row{display:flex;align-items:center;gap:12px;background:#eeeDE8;border:1px solid var(--line);padding:12px 14px;margin-top:8px;border-radius:3px;min-width:0}.command-row code{font-size:11px;line-height:1.6;overflow-wrap:anywhere;flex:1;min-width:0}.copy-command{font-size:10px;background:var(--paper);border:1px solid #cecfca;border-radius:3px;padding:6px 9px;flex-shrink:0}.copy-command:hover{background:white}.copy-status{grid-column:2;font-size:11px;color:var(--green);min-height:16px;margin:0}.hero-actions a:focus-visible,.connection-section a:focus-visible{outline:2px solid var(--purple);outline-offset:4px}.workspace{scroll-margin-top:24px}
 @media(max-width:850px){.connection-section{gap:20px 35px}}
 @media(max-width:600px){.site-header{align-items:flex-start;gap:18px}.site-header nav{flex-wrap:wrap;justify-content:flex-end;gap:12px}.site-header .wordmark{font-size:18px;white-space:nowrap}.site-header nav a[href^="https://github.com/artheras/aria-plugins"]:not(.setup-link){display:none}.connection-section{grid-template-columns:1fr;padding-top:36px;gap:24px}.connection-intro>p:not(.eyebrow){max-width:100%}.connection-intro h2{font-size:28px}.copy-status{grid-column:1}.hero-actions{gap:20px}}
+
+
+/* Order management follows the existing typography and neutral palette. */
+.history-section{padding:48px 5%;border-top:1px solid var(--line,#ddd)}
+.history-section h2{font-size:clamp(26px,3vw,38px);margin:8px 0 0}
+.history-filters{display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin:24px 0}
+.history-filters label{display:grid;gap:8px;font-size:13px}
+.history-filters input,.history-filters select,.edit-products input,.catalogue-row input{font:inherit;padding:10px;border:1px solid #d5d5d2;border-radius:6px;background:transparent;color:inherit}
+.history-filters .check-filter{display:flex;align-items:center;padding:10px 0}
+.history-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:18px}
+.order-card{text-align:left;display:grid;gap:8px;padding:18px;background:transparent;border:1px solid #d5d5d2;border-radius:8px;font:inherit;cursor:pointer}
+.order-card strong{font-size:14px}.order-card span{font-size:13px}.order-card small{font-size:11px;overflow-wrap:anywhere;color:#6b6b68}
+.order-card:hover{background:#eeeae5}.manage-actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:20px}
+.edit-products{display:grid;gap:12px;margin:20px 0}.edit-products label{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.edit-products input{width:80px}.catalogue-rows{display:grid;gap:16px;margin:24px 0}.catalogue-row{display:grid;gap:10px;padding:16px 0;border-bottom:1px solid #ddd}
+.catalogue-row label{display:grid;gap:5px}dialog{max-height:90vh;overflow:auto}.check-filter input{width:auto}
+@media(max-width:600px){.history-filters{display:grid;grid-template-columns:1fr 1fr}.history-filters label:first-child{grid-column:1/-1}.history-filters input{width:100%}.history-section .section-title{align-items:start}}

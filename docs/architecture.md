@@ -49,7 +49,8 @@ All amounts are integer cents in JSON. No endpoint accepts a client price.
 
 | Method/path | Body / behavior |
 | --- | --- |
-| GET /healthz | Health and mode, no credentials |
+| GET /api/health | Health and mode, no credentials |
+| GET /api/ready | Shared storage readiness |
 | GET /api/config | Public mode and module information |
 | GET /api/catalog | Trusted sample catalogue |
 | GET /api/session | Session status and CSRF value; creates demo browser session |
@@ -68,7 +69,7 @@ The browser renders model text with textContent. The service has request-size/ti
 
 ## Limits
 
-One merchant, one currency, a fixed catalogue, at most 100 units per SKU, and a USD 10,000 order limit. No inventory reservation, shipping, tax, fulfilment, refunds, subscriptions, multi-tenant administration, or live PayPal processing. Paid means a matched completed capture at reconciliation time; subsequent refunds/reversals are not handled in this starter.
+One merchant, one currency, a fixed catalogue, at most 100 units per SKU, and a USD 10,000 order limit. No inventory reservation, shipping, tax, fulfilment, partial refunds, subscriptions, multi-tenant administration, or live PayPal processing. Paid means a matched completed capture at reconciliation time; full refunds are supported; partial refunds and non-completed capture states require provider review after explicit synchronization.
 
 The public demo uses anonymous per-browser sessions and local parsing. Sandbox requires merchant authentication, preventing anonymous AI usage. Shared login/draft/payment-action throttling and structured request logs are implemented. Managed login, edge controls, cloud alert configuration, backups, and full order/refund lifecycle handling remain production work.
 
@@ -81,3 +82,8 @@ Before creating or capturing a payment, a CAS update persists an operation inten
 Firestore stores payload bytes transactionally in a dedicated collection and quotas in its `_limits` sibling. File and Redis adapters retain their contracts and support recovery scanning. No standalone volatile queue is required for the initial bounded scan. For larger data volumes, add an indexed durable queue instead of increasing full-collection scans indefinitely.
 
 A process health check and dependency readiness check are separate. Server-generated request IDs connect structured HTTP logs with operation failures. The HTTP error contract is backward compatible and adds stable codes and retry metadata. Shared quotas are CAS-backed and fail closed. See [Cloud Run operations](cloud-run.md) for deployment and verification limits.
+
+
+## Commerce 0.4.0 management
+
+See [the OpenAPI contract](../contracts/commerce.openapi.json) for owner-scoped listing, catalogue updates, revision, cancellation, expiry, manual recovery review, full refunds and provider synchronization. HTTP cursors are encrypted and bound to the authenticated owner and filters. Catalogue changes never rewrite an approved invoice. The merchant identity is stable when `ARIA_MERCHANT_ID` is configured; see [migration](identity-migration.md). Monetary actions remain browser-only, and recovery never initiates a refund.

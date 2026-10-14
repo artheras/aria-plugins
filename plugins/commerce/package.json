@@ -1,0 +1,13 @@
+{
+  "$schema": "../../contracts/plugin-package.schema.json",
+  "name": "commerce",
+  "version": "0.4.0",
+  "contract_version": "1",
+  "minimum_aria_version": "0.140.0",
+  "mcp_protocol_version": "2024-11-05",
+  "tools": ["commerce_catalog", "commerce_draft_order", "commerce_get_order"],
+  "permissions": ["read_catalog", "draft_orders", "read_orders"],
+  "required_env": ["ARIA_COMMERCE_URL", "ARIA_MERCHANT_TOKEN"],
+  "optional_env": ["ARIA_CLOUD_RUN_AUDIENCE"],
+  "human_only_actions": ["approve", "revise", "cancel", "resume", "checkout", "capture", "refund", "sync", "catalogue_update"]
+}

@@ -1,5 +1,21 @@
 # Verification
 
+## Commerce 0.4.0
+
+Automated checks additionally cover stable identity across merchant/session-secret
+rotation, revoked-token rejection, preview/apply ownership migration, catalogue CAS
+and approved-price preservation, owner/filter-bound encrypted pagination, revision
+requiring fresh approval, checkout cancellation rejection, expiry, human-reviewed
+recovery resumption, full refund/replay and lost-response inspection-only recovery.
+Bundle tests reject wrong checksums, traversal, stale skill integrity, implicit
+configuration replacement and unrelated-server loss. The OpenAPI routes/version
+are checked against the implemented HTTP registrations.
+
+Local browser checks covered drafting, approval, revision, renewed approval,
+simulated capture/full refund, product changes and new prices, and immediate
+order-history updates. These are simulated flows. The public cloud release and
+real Sandbox checks are recorded separately; see [live validation](sandbox-validation.md).
+
 Run `make test` for race-detected Go tests and vet, then `make build` for both binaries.
 
 Automated coverage includes:
@@ -59,3 +75,4 @@ Fault tests verify that intent-write failure prevents provider calls; a complete
 The actual Firestore Go SDK is exercised against a local gRPC protocol fake for read/create/CAS conflicts and separate quota collections. This is not a live Firestore deployment or a Firestore emulator verification. Real IAM permissions, transactions under production load, job/Scheduler execution, and private Cloud Run ID-token minting require live validation.
 
 The 0.3.0 bundle retains the same three-tool MCP surface and catalogue format. The compatibility check is rerun against the pinned Aria loader/registry modules when validating this bundle; it does not claim a full model-driven agent session.
+

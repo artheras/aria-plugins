@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	workflow "github.com/artheras/aria-plugins/packages/commerce"
+	merchantidentity "github.com/artheras/aria-plugins/packages/identity"
 	"github.com/artheras/aria-plugins/packages/limits"
 	"io"
 	"io/fs"
@@ -52,15 +53,23 @@ func New(c Config) *Server {
 	})
 	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
-		write(w, 200, map[string]any{"mode": c.Mode, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"agents", "approvals", "payments", "commerce"}})
+		write(w, 200, map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}})
 	})
 	s.mux.HandleFunc("GET /api/session", s.session)
 	s.mux.HandleFunc("POST /api/login", s.login)
-	s.mux.HandleFunc("GET /api/catalog", func(w http.ResponseWriter, r *http.Request) { write(w, 200, Catalog) })
+	s.mux.HandleFunc("GET /api/catalog", s.getCatalog)
+	s.mux.HandleFunc("GET /api/catalog/snapshot", s.catalogSnapshot)
+	s.mux.HandleFunc("POST /api/catalog/update", s.updateCatalog)
+	s.mux.HandleFunc("GET /api/orders", s.listOrders)
 	s.mux.HandleFunc("POST /api/orders", s.draft)
 	s.mux.HandleFunc("GET /api/orders/{id}", s.getOrder)
 	s.mux.HandleFunc("GET /api/orders/{id}/receipt", s.receipt)
 	s.mux.HandleFunc("POST /api/orders/{id}/approve", s.approve)
+	s.mux.HandleFunc("POST /api/orders/{id}/revise", s.revise)
+	s.mux.HandleFunc("POST /api/orders/{id}/cancel", s.cancelOrder)
+	s.mux.HandleFunc("POST /api/orders/{id}/resume", s.resumeOrder)
+	s.mux.HandleFunc("POST /api/orders/{id}/refund", s.refundOrder)
+	s.mux.HandleFunc("POST /api/orders/{id}/sync", s.syncPayment)
 	s.mux.HandleFunc("POST /api/orders/{id}/checkout", s.checkout)
 	s.mux.HandleFunc("POST /api/orders/{id}/capture", s.capture)
 	s.mux.HandleFunc("POST /api/paypal/webhook", s.webhook)
@@ -151,7 +160,12 @@ type identity struct {
 	bearer      bool
 }
 
-func (s *Server) merchantOwner() string { return s.sign("merchant:" + s.config.MerchantToken) }
+func (s *Server) merchantOwner() string {
+	if s.config.MerchantID != "" {
+		return merchantidentity.Owner(s.config.MerchantID)
+	}
+	return merchantidentity.LegacyOwner(s.config.SessionSecret, s.config.MerchantToken)
+}
 func (s *Server) setSession(w http.ResponseWriter, owner string) identity {
 	value := base64.RawURLEncoding.EncodeToString([]byte(owner + ":" + strconv.FormatInt(time.Now().Add(24*time.Hour).Unix(), 10)))
 	http.SetCookie(w, &http.Cookie{Name: "aria_session", Value: value + "." + s.sign(value), Path: "/", HttpOnly: true, Secure: strings.HasPrefix(s.config.PublicURL, "https://"), SameSite: http.SameSiteLaxMode, MaxAge: 86400})
@@ -186,6 +200,9 @@ func (s *Server) who(r *http.Request) (identity, error) {
 	if err != nil || time.Now().Unix() > expires {
 		return identity{}, errors.New("session expired")
 	}
+	if s.config.LegacyMerchantOwner != "" && data[0] == s.config.LegacyMerchantOwner {
+		data[0] = s.merchantOwner()
+	}
 	if s.config.Mode == "sandbox" && data[0] != s.merchantOwner() {
 		return identity{}, errors.New("merchant session required")
 	}
@@ -217,7 +234,7 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]any{"authenticated": false})
 		return
 	}
-	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf})
+	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf, "merchant": id.owner == s.merchantOwner()})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	peer, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -239,7 +256,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := s.setSession(w, s.merchantOwner())
-	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf})
+	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf, "merchant": true})
 }
 func public(order sdk.Order) sdk.Order { order.Owner = ""; order.WebhookIDs = nil; return order }
 
@@ -286,7 +303,7 @@ func (s *Server) getOrder(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	order, _, err := s.load(r.Context(), r.PathValue("id"), id.owner)
+	order, err := s.service.Get(r.Context(), actor(id), r.PathValue("id"))
 	if err != nil {
 		respondError(w, err)
 		return
@@ -303,7 +320,7 @@ func (s *Server) receipt(w http.ResponseWriter, r *http.Request) {
 		respondError(w, err)
 		return
 	}
-	if order.State != "paid" {
+	if order.State != "paid" && order.State != "refunded" && order.State != "refund_pending" && order.State != "payment_review" {
 		fail(w, 409, "receipt is available after verified capture")
 		return
 	}

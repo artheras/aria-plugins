@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/artheras/aria-plugins/apps/commerce"
+	"github.com/artheras/aria-plugins/packages/sdk"
 )
 
 func main() {
@@ -37,6 +38,9 @@ func main() {
 		host = ""
 	}
 	config.Logger = logger
+	if config.MerchantToken != "" && config.MerchantID == "" {
+		logger.Warn("legacy_merchant_identity", "message_detail", "Configure ARIA_MERCHANT_ID after reviewing the ownership migration guide; legacy credential-derived identity remains enabled for compatibility.")
+	}
 	if closer, ok := config.Store.(interface{ Close() error }); ok {
 		defer closer.Close()
 	}
@@ -49,7 +53,7 @@ func main() {
 		defer cancel()
 		_ = server.Shutdown(shutdown)
 	}()
-	logger.Info("server_started", "mode", config.Mode, "store", config.StorageKind)
+	logger.Info("server_started", "mode", config.Mode, "store", config.StorageKind, "version", sdk.Version)
 	if err = server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("server_failed", "error", err.Error())
 		os.Exit(1)

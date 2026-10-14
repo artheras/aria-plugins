@@ -1,9 +1,11 @@
-.PHONY: build test run catalog-check catalog-sync
+.PHONY: build test run catalog-check catalog-sync release
 build:
 	mkdir -p bin
 	go build -trimpath -o bin/aria-commerce ./cmd/server
 	go build -trimpath -o bin/aria-commerce-mcp ./cmd/commerce-mcp
 	go build -trimpath -o bin/aria-commerce-worker ./cmd/commerce-worker
+	go build -trimpath -o bin/aria-commerce-admin ./cmd/commerce-admin
+	go build -trimpath -o bin/aria-plugins ./cmd/aria-plugins
 test:
 	go test -race ./...
 	go vet ./...
@@ -14,3 +16,6 @@ catalog-check:
 	go run ./cmd/catalog check
 catalog-sync:
 	go run ./cmd/catalog sync
+release:
+	go run ./cmd/release
+

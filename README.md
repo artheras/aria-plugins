@@ -102,4 +102,17 @@ make test
 
 This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Firestore or Redis. Cloud Run defaults to Firestore. MIT licensed.
 
-**Verification limits:** the credential-free demo and mock providers are tested locally. Real AI Gateway calls, PayPal Sandbox transactions, webhook delivery, a full interactive Aria/Claude agent session, and Commerce cloud deployment still require configuration and live validation. The Aria Code marketing site is a separate project.
+**Verification limits:** the credential-free demo and mock providers are tested locally. Real AI Gateway calls, PayPal Sandbox transactions, webhook delivery, a full interactive Aria/Claude agent session, and full provider failure recovery still require configuration and live validation. The separately deployed public Demo is simulated; its deployed image/version is recorded independently. The Aria Code marketing site is a separate project.
+
+
+## Commerce 0.4.0
+
+Stable merchant identity, owner-scoped history/search, trusted product management, invoice revision with renewed approval, unstarted-order cancellation/expiry, manual recovery review and verified full refunds are implemented. Monetary actions remain in the browser. Unknown refunds are inspected, never automatically repeated.
+
+- [Versioned tool installation and MCP configuration](docs/bundle-readme.md)
+- [Stable ownership and credential migration](docs/identity-migration.md)
+- [HTTP/OpenAPI contract](contracts/commerce.openapi.json) and [plugin package schema](contracts/plugin-package.schema.json)
+- [Real AI/PayPal Sandbox validation](docs/sandbox-validation.md)
+- [Monitoring, backups and operational limits](docs/operations.md)
+
+Release CI publishes six macOS/Linux/Windows platform bundles and `SHA256SUMS` when the source version changes on main. `make release` builds the same bundles locally. Only Commerce is currently an installable plugin; agents, approvals and payments are reusable libraries.

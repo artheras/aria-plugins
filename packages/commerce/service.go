@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/artheras/aria-plugins/packages/agents"
@@ -45,13 +46,17 @@ func StorageError(err error) error {
 }
 
 type Service struct {
-	Store     store.Store
-	Drafter   agents.Drafter
-	Payments  payments.Provider
-	Catalog   []sdk.Product
-	PublicURL string
-	Logger    *slog.Logger
-	Now       func() time.Time
+	Store         store.Store
+	Drafter       agents.Drafter
+	Payments      payments.Provider
+	Catalog       []sdk.Product
+	ProductSource interface {
+		Products(context.Context) ([]sdk.Product, error)
+	}
+	MerchantOwner, LegacyOwner string
+	PublicURL                  string
+	Logger                     *slog.Logger
+	Now                        func() time.Time
 }
 
 func (s *Service) now() time.Time {
@@ -85,12 +90,15 @@ func (s *Service) Load(ctx context.Context, id, owner string) (sdk.Order, []byte
 	if json.Unmarshal(raw, &o) != nil || o.ID != id {
 		return o, nil, problem("invalid_record", "Stored order is invalid.", 503, false)
 	}
-	if owner != "" && o.Owner != owner {
+	if owner != "" && o.Owner != owner && !(owner == s.MerchantOwner && s.LegacyOwner != "" && o.Owner == s.LegacyOwner) {
 		return sdk.Order{}, nil, StorageError(store.ErrNotFound)
 	}
 	return o, raw, nil
 }
 func (s *Service) Save(ctx context.Context, o sdk.Order, expected []byte) error {
+	if s.LegacyOwner != "" && o.Owner == s.LegacyOwner {
+		o.Owner = s.MerchantOwner
+	}
 	raw, err := json.Marshal(o)
 	if err != nil {
 		return err
@@ -104,7 +112,10 @@ func (s *Service) Get(ctx context.Context, a Actor, id string) (sdk.Order, error
 	if a.Owner == "" {
 		return sdk.Order{}, problem("session_required", "Authenticated session required.", 401, false)
 	}
-	o, _, err := s.Load(ctx, id, a.Owner)
+	o, raw, err := s.Load(ctx, id, a.Owner)
+	if err == nil {
+		o, err = s.expire(ctx, o, raw)
+	}
 	return o, err
 }
 func human(a Actor) error {
@@ -123,16 +134,25 @@ func (s *Service) Draft(ctx context.Context, a Actor, prompt string) (sdk.Order,
 	if a.Owner == "" {
 		return sdk.Order{}, problem("session_required", "Authenticated session required.", 401, false)
 	}
-	d, err := s.Drafter.Draft(ctx, prompt, s.Catalog)
+	items := s.Catalog
+	if s.ProductSource != nil {
+		var err error
+		items, err = s.ProductSource.Products(ctx)
+		if err != nil {
+			return sdk.Order{}, problem("catalogue_unavailable", "Catalogue unavailable. Try again later.", 503, true)
+		}
+	}
+	d, err := s.Drafter.Draft(ctx, prompt, items)
 	if err != nil {
 		s.logger().WarnContext(ctx, "draft_failed", "request_id", requestID(ctx), "code", "draft_failed")
 		return sdk.Order{}, problem("draft_failed", "Could not draft this request. Check the products and try again.", 422, false)
 	}
-	i, err := sdk.BuildInvoice(newID(), d.Items, s.Catalog)
+	i, err := sdk.BuildInvoice(newID(), d.Items, items)
 	if err != nil {
 		return sdk.Order{}, problem("invalid_selection", err.Error(), 422, false)
 	}
 	o := sdk.Order{Invoice: i, Owner: a.Owner, State: "draft", Summary: d.Summary, CreatedAt: s.now().Format(time.RFC3339), Digest: approvals.Digest(i)}
+	o.ExpiresAt = s.now().Add(24 * time.Hour).Format(time.RFC3339)
 	s.event(&o, "draft_created", s.Drafter.Name()+"; prices resolved from server catalogue")
 	err = s.Save(ctx, o, nil)
 	return o, err
@@ -146,6 +166,9 @@ func (s *Service) Approve(ctx context.Context, a Actor, id, digest string) (sdk.
 		return o, err
 	}
 	before := o.State
+	if err = s.checkActive(o); err != nil {
+		return o, err
+	}
 	if err = approvals.Approve(&o, digest, s.now()); err != nil {
 		return o, problem("approval_rejected", err.Error(), 409, false)
 	}
@@ -178,6 +201,9 @@ func (s *Service) Checkout(ctx context.Context, a Actor, id string) (sdk.Order, 
 	}
 	if o.State != "approved" {
 		return o, problem("approval_required", "Approve the draft before checkout.", 409, false)
+	}
+	if err = s.checkActive(o); err != nil {
+		return o, err
 	}
 	if err = approvals.Check(o, s.now()); err != nil {
 		return o, problem("approval_expired", err.Error(), 409, false)
@@ -215,6 +241,9 @@ func (s *Service) Capture(ctx context.Context, a Actor, id string) (sdk.Order, e
 	if o.State == "paid" {
 		return o, nil
 	}
+	if o.State == "refunded" || o.State == "refund_pending" || o.State == "payment_review" {
+		return o, problem("capture_closed", "This captured order is in refund or provider review.", 409, false)
+	}
 	if o.State != "awaiting_payment" || o.Payment == nil || o.ApprovedDigest != approvals.Digest(o.Invoice) {
 		return o, problem("checkout_required", "Checkout and exact invoice approval required.", 409, false)
 	}
@@ -229,6 +258,9 @@ func (s *Service) Capture(ctx context.Context, a Actor, id string) (sdk.Order, e
 	return s.finish(ctx, o, raw, p, "payment_reconciled")
 }
 func (s *Service) finish(ctx context.Context, o sdk.Order, raw []byte, p sdk.Payment, action string) (sdk.Order, error) {
+	if o.State == "refunded" || o.State == "refund_pending" || o.State == "payment_review" || (o.Operation != nil && o.Operation.Kind == "refund") {
+		return o, problem("capture_closed", "A refund or provider review is already in progress.", 409, false)
+	}
 	if o.Payment == nil || o.Payment.OrderID != p.OrderID || o.ApprovedDigest != approvals.Digest(o.Invoice) || payments.Validate(o.Invoice, p) != nil {
 		return o, problem("payment_mismatch", "Provider payment does not match the approved invoice.", 502, false)
 	}
@@ -283,10 +315,17 @@ func (s *Service) Webhook(ctx context.Context, headers http.Header, body []byte)
 	if o.Payment == nil || o.Payment.OrderID != hook.OrderID || o.ApprovedDigest != approvals.Digest(o.Invoice) {
 		return "", problem("webhook_mismatch", "Webhook does not match an approved checkout.", 409, false)
 	}
+	if snap.Payment.Status == "REFUNDED" && o.Payment.CaptureID == snap.Payment.CaptureID {
+		_, err = s.finishRefund(ctx, o, raw, sdk.Refund{CaptureID: snap.Payment.CaptureID, Status: "COMPLETED", Amount: snap.Payment.Amount, Currency: snap.Payment.Currency, Evidence: "verified_capture_refunded_status"})
+		return "refund_reconciled", err
+	}
 	if payments.Validate(o.Invoice, snap.Payment) != nil {
 		return "", problem("payment_mismatch", "Webhook payment does not match invoice.", 502, false)
 	}
 	o.WebhookIDs = append(o.WebhookIDs, hook.ID)
+	if o.State == "refunded" || o.State == "refund_pending" || o.State == "payment_review" || (o.Operation != nil && o.Operation.Kind == "refund") {
+		return "capture_already_recorded", nil
+	}
 	_, err = s.finish(ctx, o, raw, snap.Payment, "webhook_verified")
 	if err != nil {
 		return "", problem("storage_unavailable", "Storage conflict or failure. Retry webhook delivery.", 503, true)
@@ -307,6 +346,9 @@ func (s *Service) Recover(ctx context.Context, cursor string, limit int) (string
 	}
 	recovered, pending := 0, 0
 	for _, key := range keys {
+		if strings.HasPrefix(key, "meta_") {
+			continue
+		}
 		if ctx.Err() != nil {
 			return cursor, recovered, pending, ctx.Err()
 		}
@@ -314,7 +356,10 @@ func (s *Service) Recover(ctx context.Context, cursor string, limit int) (string
 		if err != nil {
 			return cursor, recovered, pending, err
 		}
-		if o.Operation == nil || o.State == "paid" || o.Operation.NeedsReview {
+		if _, err = s.expire(ctx, o, raw); err != nil {
+			return cursor, recovered, pending, err
+		}
+		if o.Operation == nil || (o.State == "paid" && o.Operation.Kind != "refund") || o.State == "refunded" || o.Operation.NeedsReview {
 			continue
 		}
 		pending++
@@ -335,7 +380,9 @@ func (s *Service) Recover(ctx context.Context, cursor string, limit int) (string
 			return cursor, recovered, pending, err
 		}
 		raw, _ = json.Marshal(o)
-		if o.Operation.Kind == "create" {
+		if o.Operation.Kind == "refund" {
+			_, err = s.recoverRefund(ctx, o, raw)
+		} else if o.Operation.Kind == "create" {
 			if approvals.Check(o, s.now()) != nil {
 				o.Operation.NeedsReview = true
 				o.Operation.LastCode = "approval_expired"
