@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/artheras/aria-plugins/contracts/plugin-package.schema.json",
+  "title": "Aria plugin package contract v1",
+  "type": "object",
+  "required": ["name", "version", "contract_version", "minimum_aria_version", "mcp_protocol_version", "tools", "permissions", "required_env", "human_only_actions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "contract_version": {"const": "1"},
+    "minimum_aria_version": {"type": "string"},
+    "mcp_protocol_version": {"type": "string"},
+    "tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "permissions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "required_env": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]+$"}, "uniqueItems": true},
+    "optional_env": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]+$"}, "uniqueItems": true},
+    "human_only_actions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "additionalProperties": false
+}

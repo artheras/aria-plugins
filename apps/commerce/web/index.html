@@ -46,10 +46,17 @@
             <a class="secondary full" id="receipt" hidden>Download receipt <span aria-hidden="true">↓</span></a>
           </div>
           <p id="action-note" class="fine"></p>
+		  <div class="manage-actions"><button id="edit-order" class="quiet" hidden>Edit draft</button><button id="cancel-order" class="quiet" hidden>Cancel order</button><button id="resume-order" class="secondary" hidden>Review & resume</button><button id="refund-order" class="quiet" hidden>Refund full order</button><button id="sync-payment" class="quiet" hidden>Check provider status</button></div>
         </div>
       </div>
     </section>
     <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+	<section class="history-section" aria-labelledby="history-title">
+	  <div class="section-title"><div><p class="eyebrow">YOUR ORDERS</p><h2 id="history-title">Pick up where you left off.</h2></div><button id="refresh-history" class="quiet">Refresh orders</button></div>
+	  <form id="history-form" class="history-filters"><label>Search<input id="history-query" type="search" maxlength="100" placeholder="Order ID, item or request"></label><label>Status<select id="history-state"><option value="">All orders</option><option value="draft">Draft</option><option value="approved">Approved</option><option value="awaiting_payment">Awaiting payment</option><option value="paid">Paid</option><option value="refunded">Refunded</option><option value="refund_pending">Refund pending</option><option value="payment_review">Provider review</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label><label class="check-filter"><input id="history-review" type="checkbox">Needs review</label><button type="submit" class="secondary">Search</button></form>
+	  <div id="history-list" class="history-list" aria-live="polite"></div><button id="history-more" class="quiet" hidden>Load more orders</button>
+	  <div id="catalogue-admin" hidden><button id="edit-catalogue" class="quiet">Manage products</button><p class="fine">Catalogue changes apply to new or revised drafts. Approved invoices retain their reviewed prices.</p></div>
+	</section>
     <section class="audit-section">
       <div><p class="eyebrow">03 / ACTIVITY</p><h2>A record of <br>every decision.</h2><p class="fine">Stored on the server.<br>Available after a refresh.</p><button id="refresh" class="quiet" hidden>Refresh order ↻</button></div>
       <ol id="audit" class="audit"><li class="audit-placeholder">Create a draft to begin the activity record.</li></ol>
@@ -67,5 +74,8 @@
   </main>
   <footer><a class="wordmark" href="/">Aria Commerce</a><p>A plugin from <a href="https://github.com/artheras/aria-plugins" target="_blank" rel="noopener">Aria Plugins ↗</a></p><a href="https://github.com/artheras/aria-plugins/blob/main/docs/architecture.md" target="_blank" rel="noopener">Architecture ↗</a></footer>
   <dialog id="login-dialog"><form id="login-form"><p class="eyebrow">MERCHANT SESSION</p><h2>Connect your store.</h2><p class="fine">Enter the merchant token configured on this server. It stays in this session and is not saved in browser storage.</p><label for="token">Merchant token</label><input id="token" type="password" autocomplete="off" required><p id="login-error" role="alert"></p><div class="dialog-actions"><button id="close-login" type="button" class="quiet">Cancel</button><button class="primary" type="submit">Connect →</button></div></form></dialog>
+	<dialog id="edit-dialog"><form id="edit-form"><p class="eyebrow">REVISE YOUR DRAFT</p><h2>Review the quantities.</h2><p class="fine">Saving uses current catalogue prices and requires a new approval. Enter zero to leave an item out.</p><div id="edit-products" class="edit-products"></div><p id="edit-error" role="alert"></p><div class="dialog-actions"><button id="close-edit" type="button" class="quiet">Cancel</button><button class="primary" type="submit">Save & review</button></div></form></dialog>
+	<dialog id="catalogue-dialog"><form id="catalogue-form"><p class="eyebrow">MERCHANT PRODUCTS</p><h2>Your trusted catalogue.</h2><p class="fine">Prices are in USD. Removing an item makes it unavailable for new drafts.</p><div id="catalogue-rows" class="catalogue-rows"></div><button id="add-product" type="button" class="quiet">Add product</button><p id="catalogue-error" role="alert"></p><div class="dialog-actions"><button id="close-catalogue" type="button" class="quiet">Cancel</button><button class="primary" type="submit">Save products</button></div></form></dialog>
 </body>
 </html>
+

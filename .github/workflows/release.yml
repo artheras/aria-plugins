@@ -1,0 +1,45 @@
+name: Publish plugin tools
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/sdk/version.go
+      - .github/workflows/release.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: plugin-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: Verify source
+        run: |
+          test -z "$(gofmt -l apps packages cmd)"
+          go test -race ./...
+          go vet ./...
+          make catalog-check
+          make build
+      - name: Build platform bundles
+        run: go run ./cmd/release
+      - name: Publish immutable version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(go run ./cmd/aria-plugins version | jq -r .version)
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to replace its artifacts."
+            exit 1
+          fi
+          gh release create "$tag" dist/*.zip dist/SHA256SUMS \
+            --target "$GITHUB_SHA" \
+            --title "Aria Plugins ${version}" \
+            --notes-file docs/release-notes.md

@@ -1,0 +1,5 @@
+[
+  {"sku":"TSH-001","name":"Cotton tee","unit_amount":2400,"currency":"USD"},
+  {"sku":"HAT-002","name":"Everyday cap","unit_amount":1800,"currency":"USD"},
+  {"sku":"MUG-003","name":"Ceramic mug","unit_amount":1200,"currency":"USD"}
+]

@@ -71,3 +71,8 @@ A complete plugin manager needs catalogue indexing, component registration, depe
 Claude-format manifests and `.mcp.json` are also included. For that configuration, add the built `bin/` directory to PATH and export the service URL and token. The complete Claude Code installation flow still needs separate validation. Claude's `/plugin install` command is not an implemented Aria command.
 
 References: [Anthropic's official plugin catalogue](https://github.com/anthropics/claude-plugins-official), [Aria skill loader](https://github.com/artheras/aria-code/blob/main/src/aria_code/packages/aria_skills/loader.py), [Aria MCP client](https://github.com/artheras/aria-code/blob/main/src/aria_code/mcp_client.py).
+
+
+## Precompiled tools
+
+Go is optional for MCP clients using [a verified release bundle](bundle-readme.md). The `aria-plugins` helper can merge the explicit MCP entry into your chosen configuration and verify connectivity with `doctor`. Use the matching release tag for skill installation. The helper does not start an Aria session or configure its model.

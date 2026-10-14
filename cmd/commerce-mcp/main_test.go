@@ -68,3 +68,20 @@ func TestCloudRunIdentityIsSeparateFromMerchantAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestCatalogDoctorRejectsInvalidMerchantSession(t *testing.T) {
+	for _, valid := range []bool{false, true} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/session" {
+				json.NewEncoder(w).Encode(map[string]bool{"authenticated": true, "merchant": valid})
+				return
+			}
+			w.Write([]byte(`[]`))
+		}))
+		b := bridge{base: server.URL, token: "test", client: server.Client()}
+		data, _ := json.Marshal(b.call(json.RawMessage(`{"name":"commerce_catalog","arguments":{}}`)))
+		server.Close()
+		if strings.Contains(string(data), `"isError":true`) == valid {
+			t.Fatal("catalogue did not verify merchant authority", string(data))
+		}
+	}
+}
