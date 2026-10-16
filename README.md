@@ -4,6 +4,14 @@ The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, 
 
 **Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
 
+## How PayPal and AI are used
+
+**PayPal (Sandbox).** The server talks to PayPal's REST API directly (there is no Go SDK): Orders v2 to create and capture an order, `verify-webhook-signature` to authenticate webhooks, and the Reporting API (Transaction Search, Balances) in a separate **read-only** client that cannot move money. In the browser the PayPal JavaScript buttons collect the buyer's approval, but the server alone creates, captures and checks every order against the approved invoice (amount, currency, invoice ID); a webhook reconciles independently and a replay is a no-op.
+
+**AI.** A model turns a natural-language request ("two tees and a mug", or the same in Chinese) into catalogue selections. In Sandbox mode that is Gemini on **Google Vertex AI**, called as the service's own Google identity (`ARIA_AI=vertex`); locally it can use your signed-in Aria Code account (`ARIA_AI=aria`). The model only *proposes* items. Prices come from a trusted catalogue, unknown SKUs and unknown fields are rejected, and approval, checkout, capture and refund are **not available to the agent at all**: they need a human browser session. The same tools are exposed over MCP, so an agent such as Aria Code can draft orders for a person to review.
+
+Try it: the hosted Sandbox service is described in [docs/sandbox-deployment.md](docs/sandbox-deployment.md); locally, `scripts/run-sandbox-local.sh` runs it against your own Sandbox credentials.
+
 ## Connect to Aria Code
 
 Inside a current Aria Code session:
@@ -107,7 +115,7 @@ Plugin names such as `commerce` are stable identifiers; change `displayName` for
 make test
 ```
 
-This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Firestore or Redis. Cloud Run defaults to Firestore. MIT licensed.
+This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Firestore or Redis. Cloud Run defaults to Firestore. Licensed under the [Apache License 2.0](LICENSE).
 
 **Verification limits:** the credential-free demo and mock providers are tested locally. Real AI Gateway calls, PayPal Sandbox transactions, webhook delivery, a full interactive Aria/Claude agent session, and full provider failure recovery still require configuration and live validation. The separately deployed public Demo is simulated; its deployed image/version is recorded independently. The Aria Code marketing site is a separate project.
 
