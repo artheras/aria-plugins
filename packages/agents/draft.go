@@ -96,7 +96,8 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	}
 	var envelope struct {
 		Choices []struct {
-			Message struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
@@ -115,7 +116,9 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	decoder := json.NewDecoder(strings.NewReader(envelope.Choices[0].Message.Content))
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(&raw); err != nil {
-		return Draft{}, errors.New("AI did not return a valid order draft")
+		// The reason names a JSON problem or an unexpected field, never the
+		// model's text, so it is safe to carry into the service's logs.
+		return Draft{}, fmt.Errorf("AI did not return a valid order draft (%v; finish=%s, %d bytes)", err, envelope.Choices[0].FinishReason, len(envelope.Choices[0].Message.Content))
 	}
 	draft := Draft{Items: raw.Items}
 	if err = json.Unmarshal(raw.Summary, &draft.Summary); err != nil {
