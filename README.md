@@ -102,7 +102,6 @@ Plugin names such as `commerce` are stable identifiers; change `displayName` for
 - [Connect to Aria Code](docs/aria-code.md)
 - [Architecture and HTTP contract](docs/architecture.md)
 - [Validation and remaining live checks](docs/testing.md)
-- [Devpost story draft](docs/devpost-story.md)
 
 ```sh
 make test

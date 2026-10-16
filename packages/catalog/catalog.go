@@ -169,6 +169,8 @@ func treeHash(files map[string][]byte) string {
 }
 
 func skillName(data []byte) (string, error) {
+	// Parse with LF endings; the hash still covers the file's real bytes.
+	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	if len(data) == 0 || len(data) > 20000 || !bytes.HasPrefix(data, []byte("---\n")) {
 		return "", fmt.Errorf("SKILL.md needs frontmatter and must be at most 20000 bytes")
 	}
