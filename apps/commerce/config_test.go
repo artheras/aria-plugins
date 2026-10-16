@@ -79,3 +79,29 @@ func TestAriaAIUsesLocalLoginOnlyOnTheUsersOwnMachine(t *testing.T) {
 		t.Fatal("a hosted service was allowed to use a local login", err)
 	}
 }
+
+func TestLocalParserWithRealSandboxPaymentsNeedsNoAIKeyAndIsLocalOnly(t *testing.T) {
+	for _, name := range []string{"AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "K_SERVICE", "CLOUD_RUN_JOB", "VERCEL"} {
+		t.Setenv(name, "")
+	}
+	t.Setenv("ARIA_DATA_DIR", t.TempDir())
+	t.Setenv("ARIA_MODE", "sandbox")
+	t.Setenv("PUBLIC_URL", "http://127.0.0.1:4180")
+	t.Setenv("PAYPAL_CLIENT_ID", "id")
+	t.Setenv("PAYPAL_CLIENT_SECRET", "secret")
+	t.Setenv("ARIA_MERCHANT_ID", "store-1")
+	t.Setenv("ARIA_MERCHANT_TOKEN", strings.Repeat("m", 32))
+	t.Setenv("ARIA_SESSION_SECRET", strings.Repeat("s", 32))
+	t.Setenv("ARIA_AI", "demo")
+	c, err := FromEnvironment()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(c.Drafter.Name(), "no AI") || c.Payments.Name() != "paypal-sandbox" {
+		t.Fatal("expected the local parser with real Sandbox payments:", c.Drafter.Name(), c.Payments.Name())
+	}
+	t.Setenv("K_SERVICE", "commerce")
+	if _, err = FromEnvironment(); err == nil {
+		t.Fatal("a hosted service accepted the local parser")
+	}
+}

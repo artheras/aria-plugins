@@ -48,8 +48,8 @@ func fromEnvironment(worker bool) (Config, error) {
 	// ARIA_AI=aria drafts with the signed-in Aria Code user's own model access.
 	// That login exists only on the user's machine, and a hosted service must
 	// never hold one, so refuse before anything else is configured.
-	if os.Getenv("ARIA_AI") == "aria" && (os.Getenv("K_SERVICE") != "" || os.Getenv("CLOUD_RUN_JOB") != "" || os.Getenv("VERCEL") != "") {
-		return c, errors.New("ARIA_AI=aria reads a local Aria Code login and cannot be used on a hosted service")
+	if (os.Getenv("ARIA_AI") == "aria" || os.Getenv("ARIA_AI") == "demo") && (os.Getenv("K_SERVICE") != "" || os.Getenv("CLOUD_RUN_JOB") != "" || os.Getenv("VERCEL") != "") {
+		return c, errors.New("ARIA_AI=aria or demo is for a local machine and cannot be used on a hosted service")
 	}
 	c.MerchantID, c.LegacyMerchantOwner, c.CatalogFile = os.Getenv("ARIA_MERCHANT_ID"), os.Getenv("ARIA_LEGACY_MERCHANT_OWNER"), os.Getenv("ARIA_CATALOG_FILE")
 	if c.MerchantID != "" {
@@ -155,10 +155,14 @@ func fromEnvironment(worker bool) (Config, error) {
 	}
 	if c.Mode == "sandbox" {
 		ariaAI := os.Getenv("ARIA_AI") == "aria"
+		// ARIA_AI=demo keeps the bounded local parser while payments are real
+		// Sandbox, to test the payment path without any AI credential. It is an
+		// explicit choice, never a fallback, and the drafter is named "(no AI)".
+		localParser := os.Getenv("ARIA_AI") == "demo"
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
 			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
-			if !ariaAI {
+			if !ariaAI && !localParser {
 				required = append(required, "AI_GATEWAY_MODEL")
 			}
 		}
@@ -167,7 +171,9 @@ func fromEnvironment(worker bool) (Config, error) {
 				return c, errors.New("sandbox configuration missing " + key)
 			}
 		}
-		if ariaAI {
+		if localParser {
+			c.Drafter = agents.Demo{}
+		} else if ariaAI {
 			model := os.Getenv("AI_GATEWAY_MODEL")
 			if model == "" {
 				model = agents.DefaultAriaModel
