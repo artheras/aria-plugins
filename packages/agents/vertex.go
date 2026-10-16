@@ -12,6 +12,9 @@ import (
 // DefaultVertexModel is the model used when drafting through Vertex AI.
 const DefaultVertexModel = "google/gemini-3.5-flash"
 
+// VertexMaxTokens leaves room for the model to think and still finish the JSON.
+const VertexMaxTokens = 4096
+
 // VertexBaseURL is Vertex AI's OpenAI-compatible endpoint for a project. The
 // Gateway drafter speaks that dialect, so Vertex needs no new client: only a
 // base URL and a bearer that is a Google access token.

@@ -186,7 +186,7 @@ func fromEnvironment(worker bool) (Config, error) {
 			if model == "" {
 				model = agents.DefaultVertexModel
 			}
-			c.Drafter = agents.Gateway{BaseURL: agents.VertexBaseURL(vertexProject), Model: model, KeyFunc: agents.VertexToken}
+			c.Drafter = agents.Gateway{BaseURL: agents.VertexBaseURL(vertexProject), Model: model, KeyFunc: agents.VertexToken, MaxTokens: agents.VertexMaxTokens}
 		} else if ariaAI {
 			model := os.Getenv("AI_GATEWAY_MODEL")
 			if model == "" {

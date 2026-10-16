@@ -55,14 +55,19 @@ type Gateway struct {
 	BaseURL, Key, Model string
 	// KeyFunc, when set, supplies the bearer for each call instead of Key.
 	KeyFunc func() (string, error)
-	Client  *http.Client
+	// MaxTokens caps the model's output. Reasoning models spend part of it
+	// thinking before they write the answer, so a small cap can cut the JSON
+	// off mid-object (finish_reason "length"): Gemini on Vertex did exactly that
+	// at 700. Zero means the default.
+	MaxTokens int
+	Client    *http.Client
 }
 
 func (g Gateway) Name() string { return "AI Gateway: " + g.Model }
 func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product) (Draft, error) {
 	catalogJSON, _ := json.Marshal(catalog)
 	request := map[string]any{
-		"model": g.Model, "temperature": 0, "max_tokens": 700,
+		"model": g.Model, "temperature": 0, "max_tokens": g.maxTokens(),
 		"response_format": map[string]string{"type": "json_object"},
 		"messages": []map[string]string{
 			{"role": "system", "content": "Create an order draft using only this catalogue: " + string(catalogJSON) + ". Return ONLY JSON with items [{sku,quantity}] and summary, where summary is one short plain-text sentence (a string, not an object). Quantities must be integers 1..100. Never invent SKUs or prices. If the request is ambiguous or unrelated, return items:[] with an explanation. Do not approve orders or call payment tools."},
@@ -137,4 +142,11 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 		draft.Summary = draft.Summary[:600]
 	}
 	return draft, nil
+}
+
+func (g Gateway) maxTokens() int {
+	if g.MaxTokens > 0 {
+		return g.MaxTokens
+	}
+	return 700
 }

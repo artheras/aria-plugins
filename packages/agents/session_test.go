@@ -97,3 +97,23 @@ func TestGatewayAcceptsANonStringSummaryButStillValidatesItems(t *testing.T) {
 		t.Fatal("an unknown field (a price the model made up) was accepted")
 	}
 }
+
+// A reasoning model that is cut off at the token cap returns half a JSON object.
+// The cap must be configurable, and the default must stay what it was.
+func TestGatewayTokenCapIsConfigurable(t *testing.T) {
+	var got float64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		json.NewDecoder(r.Body).Decode(&req)
+		got, _ = req["max_tokens"].(float64)
+		w.Write([]byte(`{"choices":[{"message":{"content":"{\"items\":[{\"sku\":\"TSH-001\",\"quantity\":1}],\"summary\":\"ok\"}"}}]}`))
+	}))
+	defer server.Close()
+	catalog := []sdk.Product{{SKU: "TSH-001", Name: "Cotton tee", Currency: "USD", UnitAmount: 2400}}
+	if _, err := (Gateway{BaseURL: server.URL, Model: "m", Key: "k"}).Draft(context.Background(), "x", catalog); err != nil || got != 700 {
+		t.Fatal("default cap changed", got, err)
+	}
+	if _, err := (Gateway{BaseURL: server.URL, Model: "m", Key: "k", MaxTokens: VertexMaxTokens}).Draft(context.Background(), "x", catalog); err != nil || got != float64(VertexMaxTokens) {
+		t.Fatal("configured cap not sent", got, err)
+	}
+}
