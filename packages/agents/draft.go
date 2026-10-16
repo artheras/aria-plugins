@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -91,7 +92,7 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return Draft{}, errors.New("AI service rejected the request; check model and credentials")
+		return Draft{}, fmt.Errorf("AI service rejected the request (HTTP %d); check model and credentials", res.StatusCode)
 	}
 	var envelope struct {
 		Choices []struct {
