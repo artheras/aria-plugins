@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -54,17 +55,22 @@ type Gateway struct {
 	BaseURL, Key, Model string
 	// KeyFunc, when set, supplies the bearer for each call instead of Key.
 	KeyFunc func() (string, error)
-	Client  *http.Client
+	// MaxTokens caps the model's output. Reasoning models spend part of it
+	// thinking before they write the answer, so a small cap can cut the JSON
+	// off mid-object (finish_reason "length"): Gemini on Vertex did exactly that
+	// at 700. Zero means the default.
+	MaxTokens int
+	Client    *http.Client
 }
 
 func (g Gateway) Name() string { return "AI Gateway: " + g.Model }
 func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product) (Draft, error) {
 	catalogJSON, _ := json.Marshal(catalog)
 	request := map[string]any{
-		"model": g.Model, "temperature": 0, "max_tokens": 700,
+		"model": g.Model, "temperature": 0, "max_tokens": g.maxTokens(),
 		"response_format": map[string]string{"type": "json_object"},
 		"messages": []map[string]string{
-			{"role": "system", "content": "Create an order draft using only this catalogue: " + string(catalogJSON) + ". Return ONLY JSON with items [{sku,quantity}] and summary. Quantities must be integers 1..100. Never invent SKUs or prices. If the request is ambiguous or unrelated, return items:[] with an explanation. Do not approve orders or call payment tools."},
+			{"role": "system", "content": "Create an order draft using only this catalogue: " + string(catalogJSON) + ". Return ONLY JSON with items [{sku,quantity}] and summary, where summary is one short plain-text sentence (a string, not an object). Quantities must be integers 1..100. Never invent SKUs or prices. If the request is ambiguous or unrelated, return items:[] with an explanation. Do not approve orders or call payment tools."},
 			{"role": "user", "content": prompt},
 		},
 	}
@@ -91,11 +97,12 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return Draft{}, errors.New("AI service rejected the request; check model and credentials")
+		return Draft{}, fmt.Errorf("AI service rejected the request (HTTP %d); check model and credentials", res.StatusCode)
 	}
 	var envelope struct {
 		Choices []struct {
-			Message struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
@@ -103,11 +110,27 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	if err = json.NewDecoder(io.LimitReader(res.Body, 128<<10)).Decode(&envelope); err != nil || len(envelope.Choices) != 1 {
 		return Draft{}, errors.New("invalid AI response")
 	}
-	var draft Draft
+	// Items are what matters and are validated strictly below. The summary is
+	// commentary: a real model sometimes returns it as an object (Gemini on
+	// Vertex answered {"total_amount": 6000}), and rejecting a correct order for
+	// that would turn a harmless formatting choice into a failed draft.
+	var raw struct {
+		Items   []sdk.Selection `json:"items"`
+		Summary json.RawMessage `json:"summary"`
+	}
 	decoder := json.NewDecoder(strings.NewReader(envelope.Choices[0].Message.Content))
 	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&draft); err != nil {
-		return Draft{}, errors.New("AI did not return a valid order draft")
+	if err = decoder.Decode(&raw); err != nil {
+		// The reason names a JSON problem or an unexpected field, never the
+		// model's text, so it is safe to carry into the service's logs.
+		return Draft{}, fmt.Errorf("AI did not return a valid order draft (%v; finish=%s, %d bytes)", err, envelope.Choices[0].FinishReason, len(envelope.Choices[0].Message.Content))
+	}
+	draft := Draft{Items: raw.Items}
+	if err = json.Unmarshal(raw.Summary, &draft.Summary); err != nil {
+		draft.Summary = ""
+	}
+	if strings.TrimSpace(draft.Summary) == "" {
+		draft.Summary = "Draft prepared from your request. Review quantities and prices before approval."
 	}
 	if err = decoder.Decode(&struct{}{}); err != io.EOF {
 		return Draft{}, errors.New("unexpected trailing AI content")
@@ -119,4 +142,11 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 		draft.Summary = draft.Summary[:600]
 	}
 	return draft, nil
+}
+
+func (g Gateway) maxTokens() int {
+	if g.MaxTokens > 0 {
+		return g.MaxTokens
+	}
+	return 700
 }

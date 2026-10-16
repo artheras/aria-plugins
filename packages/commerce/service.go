@@ -144,7 +144,10 @@ func (s *Service) Draft(ctx context.Context, a Actor, prompt string) (sdk.Order,
 	}
 	d, err := s.Drafter.Draft(ctx, prompt, items)
 	if err != nil {
-		s.logger().WarnContext(ctx, "draft_failed", "request_id", requestID(ctx), "code", "draft_failed")
+		// The drafter's errors are fixed, credential-free sentences ("AI service
+		// rejected the request (HTTP 403)"), so the cause is safe to log and is
+		// the only way to tell a model outage from a bad prompt.
+		s.logger().WarnContext(ctx, "draft_failed", "request_id", requestID(ctx), "code", "draft_failed", "cause", err.Error())
 		return sdk.Order{}, problem("draft_failed", "Could not draft this request. Check the products and try again.", 422, false)
 	}
 	i, err := sdk.BuildInvoice(newID(), d.Items, items)

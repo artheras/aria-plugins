@@ -3,6 +3,8 @@ package commerce
 import (
 	"strings"
 	"testing"
+
+	"github.com/artheras/aria-plugins/packages/agents"
 )
 
 func TestConfigurationNeverFallsBackFromSandbox(t *testing.T) {
@@ -103,5 +105,47 @@ func TestLocalParserWithRealSandboxPaymentsNeedsNoAIKeyAndIsLocalOnly(t *testing
 	t.Setenv("K_SERVICE", "commerce")
 	if _, err = FromEnvironment(); err == nil {
 		t.Fatal("a hosted service accepted the local parser")
+	}
+}
+
+func TestVertexDraftingIsAllowedOnCloudRunAndNeedsAProject(t *testing.T) {
+	for _, name := range []string{"AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "CLOUD_RUN_JOB", "VERCEL", "ARIA_STORE"} {
+		t.Setenv(name, "")
+	}
+	t.Setenv("ARIA_DATA_DIR", t.TempDir())
+	t.Setenv("ARIA_MODE", "sandbox")
+	t.Setenv("PUBLIC_URL", "http://127.0.0.1:4180")
+	t.Setenv("PAYPAL_CLIENT_ID", "id")
+	t.Setenv("PAYPAL_CLIENT_SECRET", "secret")
+	t.Setenv("ARIA_MERCHANT_ID", "store-1")
+	t.Setenv("ARIA_MERCHANT_TOKEN", strings.Repeat("m", 32))
+	t.Setenv("ARIA_SESSION_SECRET", strings.Repeat("s", 32))
+	t.Setenv("ARIA_AI", "vertex")
+	t.Setenv("K_SERVICE", "")
+	t.Setenv("GOOGLE_CLOUD_PROJECT", "")
+	if _, err := FromEnvironment(); err == nil || !strings.Contains(err.Error(), "GOOGLE_CLOUD_PROJECT") {
+		t.Fatal("vertex drafting without a project was accepted", err)
+	}
+	t.Setenv("GOOGLE_CLOUD_PROJECT", "my-project")
+	c, err := FromEnvironment()
+	if err != nil {
+		t.Fatal("vertex drafting needs no key:", err)
+	}
+	if name := c.Drafter.Name(); !strings.Contains(name, "google/gemini") {
+		t.Fatal("default model not applied:", name)
+	}
+	// Unlike the local-login and local-parser options, this one is for hosted use.
+	t.Setenv("K_SERVICE", "commerce")
+	t.Setenv("ARIA_STORE", "firestore")
+	t.Setenv("ARIA_FIRESTORE_DATABASE", "(default)")
+	t.Setenv("ARIA_FIRESTORE_COLLECTION", "aria_commerce_sandbox_records")
+	if _, err = FromEnvironment(); err != nil && strings.Contains(err.Error(), "hosted") {
+		t.Fatal("vertex drafting was refused on a hosted service:", err)
+	}
+}
+
+func TestVertexBaseURL(t *testing.T) {
+	if got := agents.VertexBaseURL("p1"); got != "https://aiplatform.googleapis.com/v1/projects/p1/locations/global/endpoints/openapi" {
+		t.Fatal(got)
 	}
 }
