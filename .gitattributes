@@ -1,0 +1,6 @@
+# Skill files are hashed byte-for-byte into skills.lock.json, so a Windows checkout
+# must not rewrite their line endings.
+* text=auto eol=lf
+*.zip binary
+*.jpg binary
+*.png binary
