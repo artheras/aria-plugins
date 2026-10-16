@@ -45,6 +45,12 @@ func FromEnvironment() (Config, error) { return fromEnvironment(false) }
 func FromEnvironmentForWorker() (Config, error) { return fromEnvironment(true) }
 func fromEnvironment(worker bool) (Config, error) {
 	c := Config{Mode: os.Getenv("ARIA_MODE"), PublicURL: os.Getenv("PUBLIC_URL"), SessionSecret: os.Getenv("ARIA_SESSION_SECRET"), MerchantToken: os.Getenv("ARIA_MERCHANT_TOKEN"), DataDir: os.Getenv("ARIA_DATA_DIR")}
+	// ARIA_AI=aria drafts with the signed-in Aria Code user's own model access.
+	// That login exists only on the user's machine, and a hosted service must
+	// never hold one, so refuse before anything else is configured.
+	if os.Getenv("ARIA_AI") == "aria" && (os.Getenv("K_SERVICE") != "" || os.Getenv("CLOUD_RUN_JOB") != "" || os.Getenv("VERCEL") != "") {
+		return c, errors.New("ARIA_AI=aria reads a local Aria Code login and cannot be used on a hosted service")
+	}
 	c.MerchantID, c.LegacyMerchantOwner, c.CatalogFile = os.Getenv("ARIA_MERCHANT_ID"), os.Getenv("ARIA_LEGACY_MERCHANT_OWNER"), os.Getenv("ARIA_CATALOG_FILE")
 	if c.MerchantID != "" {
 		if err := merchantidentity.ValidateID(c.MerchantID); err != nil {
@@ -148,23 +154,35 @@ func fromEnvironment(worker bool) (Config, error) {
 		return c, errors.New("ARIA_SESSION_SECRET must contain at least 32 characters")
 	}
 	if c.Mode == "sandbox" {
+		ariaAI := os.Getenv("ARIA_AI") == "aria"
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
-			required = append(required, "AI_GATEWAY_MODEL", "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
+			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
+			if !ariaAI {
+				required = append(required, "AI_GATEWAY_MODEL")
+			}
 		}
 		for _, key := range required {
 			if os.Getenv(key) == "" {
 				return c, errors.New("sandbox configuration missing " + key)
 			}
 		}
-		key := os.Getenv("AI_GATEWAY_API_KEY")
-		if key == "" {
-			key = os.Getenv("VERCEL_OIDC_TOKEN")
+		if ariaAI {
+			model := os.Getenv("AI_GATEWAY_MODEL")
+			if model == "" {
+				model = agents.DefaultAriaModel
+			}
+			c.Drafter = agents.Gateway{BaseURL: agents.AriaGatewayURL(), Model: model, KeyFunc: agents.AriaSessionToken}
+		} else {
+			key := os.Getenv("AI_GATEWAY_API_KEY")
+			if key == "" {
+				key = os.Getenv("VERCEL_OIDC_TOKEN")
+			}
+			if key == "" && !worker {
+				return c, errors.New("set AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN for sandbox mode")
+			}
+			c.Drafter = agents.Gateway{BaseURL: "https://ai-gateway.vercel.sh/v1", Key: key, Model: os.Getenv("AI_GATEWAY_MODEL")}
 		}
-		if key == "" && !worker {
-			return c, errors.New("set AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN for sandbox mode")
-		}
-		c.Drafter = agents.Gateway{BaseURL: "https://ai-gateway.vercel.sh/v1", Key: key, Model: os.Getenv("AI_GATEWAY_MODEL")}
 		pp := payments.NewPayPal(os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), os.Getenv("PAYPAL_WEBHOOK_ID"))
 		if os.Getenv("PAYPAL_BUTTONS") == "1" {
 			pp.Embedded, c.PayPalButtons, c.PayPalClientID = true, true, os.Getenv("PAYPAL_CLIENT_ID")
