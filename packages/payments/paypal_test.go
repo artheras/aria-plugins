@@ -3,8 +3,11 @@ package payments
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -155,5 +158,57 @@ func TestPayPalEmbeddedCreateHasNoRedirectAndKeepsInvoiceBinding(t *testing.T) {
 	}
 	if payment.OrderID != "PAYPAL1" || payment.CheckoutURL != "" || payment.Amount != 6000 {
 		t.Fatal("unexpected embedded payment", payment)
+	}
+}
+
+// flaky drops the first n connections, as a stalled proxy or TLS handshake does.
+type flaky struct {
+	inner http.RoundTripper
+	drops int
+	seen  int
+}
+
+func (f *flaky) RoundTrip(r *http.Request) (*http.Response, error) {
+	f.seen++
+	if f.seen <= f.drops {
+		return nil, errors.New("net/http: TLS handshake timeout")
+	}
+	return f.inner.RoundTrip(r)
+}
+
+// Creating a PayPal order carries a stable PayPal-Request-Id, so a dropped
+// connection is retried instead of leaving the order pending for a manual retry.
+func TestPayPalRetriesDroppedConnectionsOnIdempotentCallsOnly(t *testing.T) {
+	invoice := sdk.Invoice{ID: "local-order", Currency: "USD", Amount: 6000}
+	creates := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/oauth2/token":
+			json.NewEncoder(w).Encode(map[string]any{"access_token": "access", "expires_in": 3600})
+		case "/v2/checkout/orders":
+			creates++
+			if b, _ := io.ReadAll(r.Body); len(b) == 0 {
+				t.Error("retry lost the request body")
+			}
+			json.NewEncoder(w).Encode(map[string]any{"id": "PAYPAL1", "status": "CREATED", "purchase_units": []any{map[string]any{"custom_id": invoice.ID, "amount": map[string]string{"currency_code": "USD", "value": "60.00"}}}})
+		}
+	}))
+	defer server.Close()
+	p := NewPayPal("client", "secret", "WH1")
+	p.base, p.Embedded = server.URL, true
+	transport := &flaky{inner: http.DefaultTransport, drops: 2}
+	p.client = &http.Client{Timeout: 5 * time.Second, Transport: transport}
+	if _, err := p.Create(context.Background(), invoice, "https://app.test/", "https://app.test/"); err != nil {
+		t.Fatal("dropped connections were not retried:", err)
+	}
+	if creates != 1 {
+		t.Fatalf("the order was created %d times", creates)
+	}
+
+	// A write with no idempotency key must never be repeated.
+	transport.seen, transport.drops = 0, 5
+	req, _ := http.NewRequest("POST", server.URL+"/v2/checkout/orders", strings.NewReader("{}"))
+	if _, err := p.do(req, false); err == nil || transport.seen != 1 {
+		t.Fatalf("a non-idempotent call was retried (%d attempts)", transport.seen)
 	}
 }

@@ -48,7 +48,7 @@ func (p *PayPal) accessToken(ctx context.Context) (string, error) {
 	req, _ := http.NewRequestWithContext(ctx, "POST", p.base+"/v1/oauth2/token", strings.NewReader(url.Values{"grant_type": {"client_credentials"}}.Encode()))
 	req.SetBasicAuth(p.ClientID, p.Secret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	res, err := p.client.Do(req)
+	res, err := p.do(req, true)
 	if err != nil {
 		return "", errors.New("PayPal authentication unavailable")
 	}
@@ -90,7 +90,9 @@ func (p *PayPal) request(ctx context.Context, method, path, key string, body any
 	if key != "" {
 		req.Header.Set("PayPal-Request-Id", key)
 	}
-	res, err := p.client.Do(req)
+	// A call that carries PayPal-Request-Id, or only reads, can be repeated
+	// without effect, so a dropped or stalled connection is retried.
+	res, err := p.do(req, method == "GET" || key != "")
 	if err != nil {
 		return errors.New("PayPal unavailable; retry with the same order")
 	}
@@ -102,6 +104,44 @@ func (p *PayPal) request(ctx context.Context, method, path, key string, body any
 		return errors.New("invalid PayPal response")
 	}
 	return nil
+}
+
+// do sends a request, retrying transport failures (not HTTP responses) when it
+// is safe to repeat. Connections through a proxy or a slow link sometimes stall
+// in the TLS handshake; one retry usually succeeds, and without it the order is
+// left in a "pending" state that needs a manual retry.
+func (p *PayPal) do(req *http.Request, repeatable bool) (*http.Response, error) {
+	var body []byte
+	if req.GetBody != nil {
+		if r, err := req.GetBody(); err == nil {
+			body, _ = io.ReadAll(r)
+			r.Close()
+		}
+	}
+	attempts := 1
+	if repeatable {
+		attempts = 3
+	}
+	var res *http.Response
+	var err error
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			select {
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			case <-time.After(time.Duration(i) * 400 * time.Millisecond):
+			}
+			if req.GetBody != nil {
+				req.Body, _ = req.GetBody()
+			} else if body != nil {
+				req.Body = io.NopCloser(bytes.NewReader(body))
+			}
+		}
+		if res, err = p.client.Do(req); err == nil {
+			return res, nil
+		}
+	}
+	return nil, err
 }
 
 type money struct {
