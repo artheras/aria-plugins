@@ -11,6 +11,39 @@ async function api(path, body) {
   if (!response.ok) { if(response.status===401) $('login-dialog').showModal(); throw new Error(data.error || 'Request failed'); }
   return data;
 }
+// PayPal's buttons only collect the buyer's approval. The server created this
+// order, and it alone captures and checks amount, currency and invoice: the
+// browser is never trusted to report that a payment happened.
+let paypalLoad = null, buttonsFor = '';
+function loadPayPal() {
+  if(!paypalLoad) paypalLoad = new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://www.paypal.com/sdk/js?client-id='+encodeURIComponent(config.paypal_client_id)+'&currency=USD&intent=capture&components=buttons';
+    script.onload=()=>window.paypal?resolve(window.paypal):reject(new Error('PayPal buttons did not load.'));
+    script.onerror=()=>{paypalLoad=null;reject(new Error('Could not load PayPal buttons. Check your connection.'));};
+    document.head.append(script);
+  });
+  return paypalLoad;
+}
+async function renderPayPalButtons() {
+  const box=$('paypal-buttons');
+  const show=!!config.paypal_client_id && !!order && order.state==='awaiting_payment' && !!order.payment?.order_id && !order.payment.checkout_url && !order.operation;
+  box.hidden=!show;
+  if(!show) { buttonsFor=''; box.replaceChildren(); return; }
+  $('capture').hidden=true;
+  if(buttonsFor===order.payment.order_id) return;
+  buttonsFor=order.payment.order_id; box.replaceChildren();
+  const providerOrder=order.payment.order_id, orderId=order.id;
+  try {
+    const paypal=await loadPayPal();
+    paypal.Buttons({
+      createOrder:()=>providerOrder,
+      onApprove:()=>run(async()=>{order=await api('/api/orders/'+orderId+'/capture',{});render();await loadHistory();feedback('PayPal capture reconciled successfully.');}),
+      onCancel:()=>feedback('PayPal approval was cancelled. You can try again.'),
+      onError:()=>feedback('PayPal could not complete the approval. Nothing was captured.',true),
+    }).render('#paypal-buttons');
+  } catch(e) { buttonsFor=''; $('capture').hidden=false; feedback(e.message,true); }
+}
 function feedback(message,error=false) { $('feedback').textContent=message; $('feedback').classList.toggle('error',error); }
 async function run(action) {
   if(busy) return;
@@ -43,6 +76,7 @@ function render() {
     if(order.payment && order.payment.checkout_url) { $('paypal-link').hidden=false; $('paypal-link').href=order.payment.checkout_url; }
   }
   if(order.operation) { $('checkout').hidden=true;$('capture').hidden=true; }
+  renderPayPalButtons();
   if(['paid','refunded','refund_pending','payment_review'].includes(order.state)) { $('receipt').hidden=false; $('receipt').href='/api/orders/'+order.id+'/receipt'; }
   if(order.state==='refunded') $('action-note').textContent=config.mode==='demo'?'Simulated full refund complete. No money moved.':'Full refund verified against the original capture.';
   if(order.state==='refund_pending') $('action-note').textContent='The refund is pending. Keep this order and check provider status; do not issue a replacement refund.';

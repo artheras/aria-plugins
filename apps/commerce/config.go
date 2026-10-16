@@ -33,6 +33,10 @@ type Config struct {
 	Logger                                                                          *slog.Logger
 	DraftLimit, GlobalDraftLimit, DailyDraftLimit, OwnerDailyDraftLimit, LoginLimit int
 	StorageKind                                                                     string
+	// PayPalButtons renders PayPal's JavaScript buttons in the page. The client
+	// ID is public by design; the secret never leaves the server.
+	PayPalButtons  bool
+	PayPalClientID string
 }
 
 func FromEnvironment() (Config, error) { return fromEnvironment(false) }
@@ -161,7 +165,11 @@ func fromEnvironment(worker bool) (Config, error) {
 			return c, errors.New("set AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN for sandbox mode")
 		}
 		c.Drafter = agents.Gateway{BaseURL: "https://ai-gateway.vercel.sh/v1", Key: key, Model: os.Getenv("AI_GATEWAY_MODEL")}
-		c.Payments = payments.NewPayPal(os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), os.Getenv("PAYPAL_WEBHOOK_ID"))
+		pp := payments.NewPayPal(os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), os.Getenv("PAYPAL_WEBHOOK_ID"))
+		if os.Getenv("PAYPAL_BUTTONS") == "1" {
+			pp.Embedded, c.PayPalButtons, c.PayPalClientID = true, true, os.Getenv("PAYPAL_CLIENT_ID")
+		}
+		c.Payments = pp
 	} else {
 		c.Drafter = agents.Demo{}
 		c.Payments = payments.Demo{}

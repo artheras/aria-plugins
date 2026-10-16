@@ -123,3 +123,37 @@ func TestPendingCaptureCannotBePaid(t *testing.T) {
 		}
 	}
 }
+
+// With PayPal's JavaScript buttons the page approves the order, so the order is
+// created without a redirect experience and without a checkout link. The server
+// still pins the invoice, amount and currency.
+func TestPayPalEmbeddedCreateHasNoRedirectAndKeepsInvoiceBinding(t *testing.T) {
+	invoice := sdk.Invoice{ID: "local-order", Currency: "USD", Amount: 6000}
+	var sawSource bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/oauth2/token":
+			json.NewEncoder(w).Encode(map[string]any{"access_token": "access", "expires_in": 3600})
+		case "/v2/checkout/orders":
+			var body map[string]any
+			json.NewDecoder(r.Body).Decode(&body)
+			_, sawSource = body["payment_source"]
+			json.NewEncoder(w).Encode(map[string]any{"id": "PAYPAL1", "status": "CREATED", "purchase_units": []any{map[string]any{"custom_id": invoice.ID, "amount": map[string]string{"currency_code": "USD", "value": "60.00"}}}})
+		default:
+			t.Error("unexpected endpoint", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	p := NewPayPal("client", "secret", "WH1")
+	p.base, p.client, p.Embedded = server.URL, &http.Client{Timeout: time.Second}, true
+	payment, err := p.Create(context.Background(), invoice, "https://app.test/", "https://app.test/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sawSource {
+		t.Fatal("embedded order still asked PayPal for a redirect flow")
+	}
+	if payment.OrderID != "PAYPAL1" || payment.CheckoutURL != "" || payment.Amount != 6000 {
+		t.Fatal("unexpected embedded payment", payment)
+	}
+}
