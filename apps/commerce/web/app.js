@@ -18,7 +18,7 @@ let paypalLoad = null, buttonsFor = '';
 function loadPayPal() {
   if(!paypalLoad) paypalLoad = new Promise((resolve,reject)=>{
     const script=document.createElement('script');
-    script.src='https://www.paypal.com/sdk/js?client-id='+encodeURIComponent(config.paypal_client_id)+'&currency=USD&intent=capture&components=buttons';
+    script.src='https://www.paypal.com/sdk/js?client-id='+encodeURIComponent(config.paypal_client_id)+'&currency=USD&intent=capture&components=buttons&disable-funding=paylater,card';
     script.onload=()=>window.paypal?resolve(window.paypal):reject(new Error('PayPal buttons did not load.'));
     script.onerror=()=>{paypalLoad=null;reject(new Error('Could not load PayPal buttons. Check your connection.'));};
     document.head.append(script);
