@@ -14,3 +14,7 @@ Aria's integrity algorithm is SHA-256 over each sorted relative path, NUL, file 
 Do not edit generated `skills/*` or `skills.lock.json` directly. Third-party plugins can get a separate reviewed `external_plugins/` area once actual integrations are submitted; the current validator accepts local `plugins/<name>` packages only.
 
 Keep host-specific loaders in Aria Code. This repository distributes plugin content and reusable tools. Current Aria installations require separate MCP registration; command files and manifests alone do not register slash commands.
+
+## Which copy to edit
+
+`plugins/<name>/skills/` is the canonical source. `skills/<name>/` at the repository root is a **generated mirror** for the current Aria installer: never edit it by hand. Change the plugin copy, run `make catalog-sync`, and commit both together. If `make catalog-check` reports a changed hash or a stale mirror, you edited the mirror or forgot to sync.
