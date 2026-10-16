@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -85,6 +86,12 @@ func (f *File) CAS(_ context.Context, key string, expected, next []byte) error {
 	}
 	if err = os.Rename(name, filepath.Join(f.Dir, key+".json")); err != nil {
 		return err
+	}
+	// Make the rename durable. Windows cannot fsync a directory handle (Sync
+	// fails with "handle is invalid"), and NTFS journals the rename itself, so
+	// there is nothing further to flush there.
+	if runtime.GOOS == "windows" {
+		return nil
 	}
 	dir, err := os.Open(f.Dir)
 	if err != nil {

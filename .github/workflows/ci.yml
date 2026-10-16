@@ -4,12 +4,15 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.26.x'
           cache: false
@@ -18,3 +21,29 @@ jobs:
       - run: go vet ./...
       - run: make catalog-check
       - run: make build
+
+  # The plugin users run on macOS and Windows; Linux alone would not notice a
+  # path, line-ending or tool-behaviour difference there.
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - run: go test ./...
+
+  vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
