@@ -132,7 +132,7 @@ func (c *Client) get(ctx context.Context, path string, query url.Values, out any
 			c.pause(ctx, attempt, res.Header.Get("Retry-After"))
 			continue
 		case res.StatusCode < 200 || res.StatusCode >= 300:
-			return fmt.Errorf("PayPal request rejected (HTTP %d)", res.StatusCode)
+			return fmt.Errorf("PayPal request rejected (HTTP %d%s)", res.StatusCode, reason(body))
 		}
 		if readErr != nil || len(body) > maxBody {
 			return errors.New("PayPal response unreadable or too large")
@@ -158,4 +158,32 @@ func (c *Client) pause(ctx context.Context, attempt int, retryAfter string) {
 	default:
 		c.sleep(d)
 	}
+}
+
+// reason extracts PayPal's own error name and message, which say why a request
+// was refused (for example that Transaction search is not enabled for the app).
+// Both are PayPal's text, never our credentials.
+func reason(body []byte) string {
+	var e struct {
+		Name    string `json:"name"`
+		Message string `json:"message"`
+		Error   string `json:"error"`
+		Desc    string `json:"error_description"`
+	}
+	if json.Unmarshal(body, &e) != nil {
+		return ""
+	}
+	parts := []string{}
+	for _, v := range []string{e.Name, e.Error, e.Message, e.Desc} {
+		if v = strings.TrimSpace(v); v != "" {
+			if len(v) > 160 {
+				v = v[:160]
+			}
+			parts = append(parts, v)
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return ": " + strings.Join(parts, " - ")
 }
