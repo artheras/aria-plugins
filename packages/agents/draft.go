@@ -52,7 +52,9 @@ func (Demo) Draft(_ context.Context, prompt string, catalog []sdk.Product) (Draf
 
 type Gateway struct {
 	BaseURL, Key, Model string
-	Client              *http.Client
+	// KeyFunc, when set, supplies the bearer for each call instead of Key.
+	KeyFunc func() (string, error)
+	Client  *http.Client
 }
 
 func (g Gateway) Name() string { return "AI Gateway: " + g.Model }
@@ -71,7 +73,13 @@ func (g Gateway) Draft(ctx context.Context, prompt string, catalog []sdk.Product
 	if err != nil {
 		return Draft{}, errors.New("invalid AI endpoint")
 	}
-	req.Header.Set("Authorization", "Bearer "+g.Key)
+	key := g.Key
+	if g.KeyFunc != nil {
+		if key, err = g.KeyFunc(); err != nil {
+			return Draft{}, err
+		}
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
 	req.Header.Set("Content-Type", "application/json")
 	client := g.Client
 	if client == nil {
