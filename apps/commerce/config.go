@@ -159,10 +159,18 @@ func fromEnvironment(worker bool) (Config, error) {
 		// Sandbox, to test the payment path without any AI credential. It is an
 		// explicit choice, never a fallback, and the drafter is named "(no AI)".
 		localParser := os.Getenv("ARIA_AI") == "demo"
+		// ARIA_AI=vertex drafts with Gemini on Vertex AI as the service's own
+		// Google identity (Application Default Credentials). Unlike the two
+		// above it is meant for hosted use: no user's login, no stored key.
+		vertexAI := os.Getenv("ARIA_AI") == "vertex"
+		vertexProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		if vertexAI && vertexProject == "" {
+			return c, errors.New("ARIA_AI=vertex needs GOOGLE_CLOUD_PROJECT")
+		}
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
 			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
-			if !ariaAI && !localParser {
+			if !ariaAI && !localParser && !vertexAI {
 				required = append(required, "AI_GATEWAY_MODEL")
 			}
 		}
@@ -173,6 +181,12 @@ func fromEnvironment(worker bool) (Config, error) {
 		}
 		if localParser {
 			c.Drafter = agents.Demo{}
+		} else if vertexAI {
+			model := os.Getenv("AI_GATEWAY_MODEL")
+			if model == "" {
+				model = agents.DefaultVertexModel
+			}
+			c.Drafter = agents.Gateway{BaseURL: agents.VertexBaseURL(vertexProject), Model: model, KeyFunc: agents.VertexToken}
 		} else if ariaAI {
 			model := os.Getenv("AI_GATEWAY_MODEL")
 			if model == "" {
