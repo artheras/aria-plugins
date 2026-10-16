@@ -21,7 +21,15 @@ $commerce:commerce Draft an order for 2 tees and 1 mug.
 
 The current Aria installer discovers root `skills/*/SKILL.md`, reads `.claude-plugin/marketplace.json`, and verifies `skills.lock.json`. The directory name is required by the existing Aria loader; it is a compatibility format.
 
-Skill installation does not register commands/MCP or build binaries. To get the tools without installing Go, download the bundle for your platform and `SHA256SUMS` from the [latest release](https://github.com/artheras/aria-plugins/releases/latest), verify the checksum, and follow [the bundle guide](docs/bundle-readme.md); its `aria-plugins install` helper places the MCP bridge for you. Configure and run the Go bridge using the [Aria Code connection guide](docs/aria-code.md). A full plugin manager that installs every component together belongs in the Aria Code host.
+**One command** installs the verified MCP tools and registers them with Aria Code (macOS and Linux; no Go needed):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/artheras/aria-plugins/main/install.sh | sh
+```
+
+It checks the download against the release `SHA256SUMS`, backs up an existing `mcp_servers.json`, keeps your other servers, and runs `doctor`. Windows: use the zip from the releases page and [the bundle guide](docs/bundle-readme.md).
+
+Skill installation alone does not register commands/MCP or build binaries. Configure and run the Go bridge using the [Aria Code connection guide](docs/aria-code.md). A full plugin manager that installs every component together belongs in the Aria Code host.
 
 ## Catalogue layout
 
