@@ -53,7 +53,11 @@ func New(c Config) *Server {
 	})
 	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
-		write(w, 200, map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}})
+		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
+		if c.PayPalButtons {
+			cfg["paypal_client_id"] = c.PayPalClientID
+		}
+		write(w, 200, cfg)
 	})
 	s.mux.HandleFunc("GET /api/session", s.session)
 	s.mux.HandleFunc("POST /api/login", s.login)
@@ -94,7 +98,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "same-origin")
 	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+	w.Header().Set("Content-Security-Policy", s.csp())
 	w.Header().Set("Cache-Control", "no-store")
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	if r.Method == "POST" && r.URL.Path != "/api/paypal/webhook" {
@@ -423,3 +427,16 @@ func (w *responseLog) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 func (w *responseLog) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+// csp is strict by default. PayPal's buttons need its script, frames and API
+// calls, so those origins are allowed only when the buttons are switched on.
+func (s *Server) csp() string {
+	script, frame, connect, img := "'self'", "", "'self'", "'self'"
+	if s.config.PayPalButtons {
+		img += " https://www.paypalobjects.com data:"
+		script += " https://www.paypal.com"
+		frame = " frame-src https://www.sandbox.paypal.com https://www.paypal.com;"
+		connect += " https://www.sandbox.paypal.com https://www.paypal.com"
+	}
+	return "default-src 'self'; script-src " + script + "; style-src 'self'; img-src " + img + "; connect-src " + connect + ";" + frame + " base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+}

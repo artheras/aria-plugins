@@ -103,3 +103,17 @@ The primary hosted backend target is Cloud Run. Follow [Cloud Run service and re
 ## 8. Shared request limits and errors
 
 See `.env.example` for the draft/login limit settings. Limits persist across instances, reject on storage failure, and count attempted requests before provider work. Rate limits return `429` and `Retry-After`. Errors retain `error` and add `code`, `retryable`, and `request_id`. Pending payment operations are shown in the browser; keep the same order ID while recovery inspects the result.
+
+## PayPal buttons in the page (optional)
+
+Set `PAYPAL_BUTTONS=1` in Sandbox mode and the order page shows PayPal's own
+buttons, so the buyer approves in a PayPal popup instead of leaving the page.
+The browser only collects that approval. The **server** creates the order,
+captures it, and checks invoice, amount and currency; a webhook still reconciles
+independently. The page never reports a payment as made. Enabling the buttons
+widens the Content-Security-Policy to PayPal's script, frame and API origins and
+nothing else; with it off, the policy is unchanged. The buttons load PayPal's
+script from `www.paypal.com`, which cannot be pinned with an integrity hash.
+Not exercised against a live Sandbox yet: record the result in
+[sandbox-validation.md](sandbox-validation.md).
+

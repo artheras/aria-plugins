@@ -22,11 +22,16 @@ const SandboxURL = "https://api-m.sandbox.paypal.com"
 
 type PayPal struct {
 	ClientID, Secret, WebhookID string
-	client                      *http.Client
-	base                        string
-	mu                          sync.Mutex
-	token                       string
-	expires                     time.Time
+	// Embedded creates orders for PayPal's JavaScript buttons, which collect the
+	// buyer's approval in the page. The server still creates the order, captures
+	// it and checks amount, currency and invoice; the browser only shows the
+	// approval UI and is never trusted to say a payment happened.
+	Embedded bool
+	client   *http.Client
+	base     string
+	mu       sync.Mutex
+	token    string
+	expires  time.Time
 }
 
 func NewPayPal(clientID, secret, webhookID string) *PayPal {
@@ -165,7 +170,9 @@ func (p *PayPal) Create(ctx context.Context, i sdk.Invoice, returnURL, cancelURL
 	body := map[string]any{
 		"intent":         "CAPTURE",
 		"purchase_units": []map[string]any{{"custom_id": i.ID, "description": "Aria Commerce reviewed order", "amount": money{Currency: i.Currency, Value: sdk.Decimal(i.Amount)}}},
-		"payment_source": map[string]any{"paypal": map[string]any{"experience_context": map[string]string{"return_url": returnURL, "cancel_url": cancelURL, "user_action": "PAY_NOW", "shipping_preference": "NO_SHIPPING"}}},
+	}
+	if !p.Embedded {
+		body["payment_source"] = map[string]any{"paypal": map[string]any{"experience_context": map[string]string{"return_url": returnURL, "cancel_url": cancelURL, "user_action": "PAY_NOW", "shipping_preference": "NO_SHIPPING"}}}
 	}
 	var out paypalOrder
 	if err := p.request(ctx, "POST", "/v2/checkout/orders", RequestID(i.ID, "create"), body, &out); err != nil {
@@ -177,6 +184,10 @@ func (p *PayPal) Create(ctx context.Context, i sdk.Invoice, returnURL, cancelURL
 	}
 	if s.InvoiceID != i.ID || s.Payment.Amount != i.Amount || s.Payment.Currency != i.Currency {
 		return sdk.Payment{}, errors.New("PayPal order does not match approved invoice")
+	}
+	if p.Embedded {
+		// No redirect link: the buttons approve this order ID in the page.
+		return s.Payment, nil
 	}
 	for _, link := range out.Links {
 		if link.Rel == "payer-action" || link.Rel == "approve" {

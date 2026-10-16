@@ -36,6 +36,22 @@ func TestConfigurationNeverFallsBackFromSandbox(t *testing.T) {
 	}
 }
 
+func TestContentSecurityPolicyOpensToPayPalOnlyWhenButtonsAreOn(t *testing.T) {
+	off := (&Server{config: Config{}}).csp()
+	if strings.Contains(off, "paypal") || !strings.Contains(off, "script-src 'self';") {
+		t.Fatal("default policy must not allow PayPal:", off)
+	}
+	on := (&Server{config: Config{PayPalButtons: true}}).csp()
+	for _, want := range []string{"script-src 'self' https://www.paypal.com", "frame-src https://www.sandbox.paypal.com", "connect-src 'self' https://www.sandbox.paypal.com"} {
+		if !strings.Contains(on, want) {
+			t.Fatalf("buttons policy missing %q: %s", want, on)
+		}
+	}
+	if !strings.Contains(on, "frame-ancestors 'none'") || !strings.Contains(on, "form-action 'self'") {
+		t.Fatal("enabling buttons weakened the rest of the policy:", on)
+	}
+}
+
 func TestAriaAIUsesLocalLoginOnlyOnTheUsersOwnMachine(t *testing.T) {
 	for _, name := range []string{"PUBLIC_URL", "ARIA_SESSION_SECRET", "ARIA_MERCHANT_TOKEN", "AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "K_SERVICE", "CLOUD_RUN_JOB", "VERCEL"} {
 		t.Setenv(name, "")
