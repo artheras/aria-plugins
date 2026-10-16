@@ -76,3 +76,14 @@ References: [Anthropic's official plugin catalogue](https://github.com/anthropic
 ## Precompiled tools
 
 Go is optional for MCP clients using [a verified release bundle](bundle-readme.md). The `aria-plugins` helper can merge the explicit MCP entry into your chosen configuration and verify connectivity with `doctor`. Use the matching release tag for skill installation. The helper does not start an Aria session or configure its model.
+
+## Use your Aria Code login for drafting (local)
+
+When the Commerce server runs on the same machine as a signed-in Aria Code, set
+`ARIA_AI=aria` and it drafts with that account's model access: no
+`AI_GATEWAY_API_KEY` to create. Sign in with `/login` first. `AI_GATEWAY_MODEL`
+overrides the default model, and `ARIA_API_URL` the gateway address. The login is
+read on every request, because Aria refreshes it about hourly. The server refuses
+this setting on Cloud Run or Vercel: a hosted service must not hold a user's login.
+Prices and approval are unchanged; the model still only proposes a draft.
+
