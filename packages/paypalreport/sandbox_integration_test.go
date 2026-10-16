@@ -18,7 +18,9 @@ func TestSandboxReadOnlyIntegration(t *testing.T) {
 	c := NewSandbox(id, secret) // never NewLive: this test must not touch a real account
 	ctx := context.Background()
 	if _, err := c.accessToken(ctx, true); err != nil {
-		t.Fatalf("these credentials were not accepted by the Sandbox: %v", err)
+		// The message says which: "unavailable" is the network (check proxy
+		// settings), "rejected" is the credentials.
+		t.Fatalf("could not authenticate with the Sandbox: %v", err)
 	}
 	keys := func(m map[string]any) []string {
 		out := make([]string, 0, len(m))
