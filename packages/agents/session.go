@@ -16,7 +16,7 @@ const DefaultAriaModel = "google/gemini-3.5-flash"
 func AriaGatewayURL() string {
 	api := strings.TrimSpace(os.Getenv("ARIA_API_URL"))
 	if api == "" {
-		api = "https://api.arthera.finance"
+		api = "https://api.arthera.xyz"
 	}
 	return strings.TrimRight(api, "/") + "/api/v2/llm/v1"
 }
