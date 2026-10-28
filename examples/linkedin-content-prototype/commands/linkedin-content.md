@@ -1,0 +1,1 @@
+Use the linkedin-content skill to prepare distinct English drafts for company and personal LinkedIn accounts, then direct the user to the browser to review them. Never publish or approve on the user's behalf.

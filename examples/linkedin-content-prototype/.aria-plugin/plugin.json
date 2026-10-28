@@ -1,0 +1,1 @@
+{"name":"linkedin-content","displayName":"LinkedIn Content","version":"0.1.0","description":"Local LinkedIn drafts and human review via MCP.","capabilities":["commands","skills"],"permissions":["draft_posts","read_posts"],"entrypoints":{"commands":"commands/","skills":"skills/"}}

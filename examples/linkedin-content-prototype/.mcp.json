@@ -1,0 +1,1 @@
+{"linkedin-content":{"command":"python3","args":["${LINKEDIN_PLUGIN_PATH}/mcp_server.py"]}}
