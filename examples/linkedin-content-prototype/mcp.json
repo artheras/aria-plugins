@@ -1,0 +1,1 @@
+{"servers":[{"name":"linkedin-content","command":"python3","args":["/absolute/path/to/aria-linkedin-plugin/mcp_server.py"],"env":{},"description":"Local draft and read tools. Approval stays in the browser.","enabled":true}]}
