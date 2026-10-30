@@ -1,8 +1,10 @@
 # Aria Plugins
 
-The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, and Go MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
+The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
 **Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
+
+**Finance** connects to the independent [Financial Service](https://github.com/artheras/financial-service) for statements, SEC evidence, risk metrics, historical data and simulated backtests. Its financial algorithms live in that service, not this catalogue. See [Finance setup](plugins/finance/README.md).
 
 ## How PayPal and AI are used
 
@@ -29,7 +31,7 @@ $commerce:commerce Draft an order for 2 tees and 1 mug.
 
 The current Aria installer discovers root `skills/*/SKILL.md`, reads `.claude-plugin/marketplace.json`, and verifies `skills.lock.json`. The directory name is required by the existing Aria loader; it is a compatibility format.
 
-**One command** installs the verified MCP tools and registers them with Aria Code (macOS and Linux; no Go needed):
+**One command** installs the verified Commerce MCP tools and registers them with Aria Code (macOS and Linux; no Go needed):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/artheras/aria-plugins/main/install.sh | sh

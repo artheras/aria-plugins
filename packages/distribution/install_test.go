@@ -22,7 +22,7 @@ func testBundle(t *testing.T, extra string) (string, string, string) {
 	z := zip.NewWriter(&buffer)
 	manifest, _ := json.Marshal(Manifest{Name: "commerce", Version: "0.4.0", ContractVersion: "1", GOOS: runtime.GOOS, GOARCH: runtime.GOARCH})
 	files := map[string][]byte{"bundle.json": manifest, "bin/aria-commerce-mcp" + Extension(runtime.GOOS): []byte("binary fixture")}
-	for _, name := range []string{".claude-plugin/marketplace.json", ".claude-plugin/skills.lock.json", "plugins/commerce/.aria-plugin/plugin.json", "plugins/commerce/.claude-plugin/plugin.json", "plugins/commerce/README.md", "plugins/commerce/commands/commerce.md", "plugins/commerce/skills/commerce/SKILL.md", "plugins/commerce/skills/commerce/skill-policy.json", "skills/commerce/SKILL.md", "skills/commerce/skill-policy.json"} {
+	for _, name := range []string{".claude-plugin/marketplace.json", ".claude-plugin/skills.lock.json", "plugins/commerce/.aria-plugin/plugin.json", "plugins/commerce/.claude-plugin/plugin.json", "plugins/commerce/README.md", "plugins/commerce/commands/commerce.md", "plugins/commerce/skills/commerce/SKILL.md", "plugins/commerce/skills/commerce/skill-policy.json", "skills/commerce/SKILL.md", "skills/commerce/skill-policy.json", "plugins/finance/.aria-plugin/plugin.json", "plugins/finance/.claude-plugin/plugin.json", "plugins/finance/README.md", "plugins/finance/commands/finance.md", "plugins/finance/skills/finance/SKILL.md", "plugins/finance/skills/finance/skill-policy.json", "skills/finance/SKILL.md", "skills/finance/skill-policy.json"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(name)))
 		if err != nil {
 			t.Fatal(err)
@@ -50,6 +50,9 @@ func TestInstallChecksumAndPathBoundaries(t *testing.T) {
 	i, err := Install(path, sum, filepath.Join(root, "install"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(i.Directory, "skills", "finance", "SKILL.md")); err != nil {
+		t.Fatal("finance workflow missing from installed multi-plugin catalogue", err)
 	}
 	if _, err = ReadInstallation(i.Directory); err != nil {
 		t.Fatal(err)

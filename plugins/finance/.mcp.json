@@ -1,0 +1,9 @@
+{
+  "arthera-finance": {
+    "command": "arthera-financial-service",
+    "args": [],
+    "env": {
+      "FINANCIAL_SERVICE_NETWORK": "0"
+    }
+  }
+}

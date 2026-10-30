@@ -1,0 +1,31 @@
+{
+  "$schema": "../../contracts/plugin-package.schema.json",
+  "name": "finance",
+  "version": "0.1.0",
+  "contract_version": "1",
+  "minimum_aria_version": "0.165.0",
+  "mcp_protocol_version": "2024-11-05",
+  "tools": [
+    "financial_service_info",
+    "financial_analyze_statements",
+    "financial_parse_sec_facts",
+    "financial_risk_metrics",
+    "financial_backtest",
+    "financial_market_history"
+  ],
+  "permissions": [
+    "read_financial_data",
+    "compute_financial_metrics",
+    "simulate_backtests"
+  ],
+  "required_env": [],
+  "optional_env": [
+    "FINANCIAL_SERVICE_NETWORK",
+    "EDGAR_USER_AGENT"
+  ],
+  "human_only_actions": [
+    "enable_network",
+    "place_order",
+    "publish_report"
+  ]
+}

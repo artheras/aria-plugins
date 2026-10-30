@@ -52,7 +52,7 @@ func build(root, out, platform string) (string, error) {
 		}
 		files["bin/"+name] = path
 	}
-	for _, dir := range []string{"plugins/commerce", "skills/commerce", ".claude-plugin", "contracts"} {
+	for _, dir := range []string{"plugins/commerce", "skills/commerce", "plugins/finance", "skills/finance", ".claude-plugin", "contracts"} {
 		if err = filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
