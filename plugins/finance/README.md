@@ -6,10 +6,7 @@ algorithms live in that repository. This catalogue contains workflow guidance,
 metadata and configuration templates.
 
 Install the service in its own Python 3.11+ virtual environment using that
-repository's README. During initial review, check out its
-feat/standalone-finance-service branch; main initially contains only the README.
-There is no published package or prebuilt Finance binary yet. The existing
-Commerce installer does not install this Python service.
+repository's README. Install the Finance service separately from the Commerce tools.
 
 For Codex, register the service executable:
 
@@ -25,7 +22,7 @@ its venv/bin on PATH). Alternatively:
 claude mcp add --transport stdio arthera-finance -- /absolute/path/to/financial-service/.venv/bin/arthera-financial-service
 ```
 
-For the updated Aria Code host, enter:
+For Aria Code, enter:
 
 ```text
 /mcp finance install "/absolute/path/to/financial-service/.venv/bin/python"
@@ -34,9 +31,8 @@ For the updated Aria Code host, enter:
 /skills doctor
 ```
 
-Use a pinned review branch/commit with /skills add --ref while this catalogue PR
-is unmerged. An already installed catalogue is not automatically overwritten.
-For older hosts, merge the entry from mcp.json into the actual Aria
+An already installed catalogue is not automatically overwritten.
+You can also merge the entry from mcp.json into the actual Aria
 mcp_servers.json, replacing command with the literal service executable path,
 then restart. Skill installation does not register commands or MCP servers.
 The commands/finance.md file is a workflow entrypoint for hosts that support it;
@@ -52,5 +48,4 @@ The service exposes six tools listed in package.json. Networking defaults to off
 Supplied-data calculations work without market credentials. Only the host can
 enable FINANCIAL_SERVICE_NETWORK=1; SEC reads additionally need EDGAR_USER_AGENT.
 These are read-only data/analysis tools and simulated backtests, with no trading
-or publication capability. The updated Aria host also fixes MCP isError handling
-so SDK validation failures cannot be presented as successful calculations.
+or publication capability. MCP validation failures are reported as errors.
