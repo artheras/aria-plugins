@@ -3,6 +3,9 @@
   "skills": {
     "commerce:commerce": {
       "sha256": "f38d17eb735cf6714e52a76911a6f7a92db3a6896b0427a81982d7407ec13e4b"
+    },
+    "finance:finance": {
+      "sha256": "ba0018a5e96457925b4021d9ca508641b2c4a7ad03422579f8f1faa271bd88c1"
     }
   }
 }

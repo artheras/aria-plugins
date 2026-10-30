@@ -1,6 +1,6 @@
 {
   "name": "aria-plugins",
-  "description": "Aria Code plugin catalogue: portable workflows and Go MCP integrations.",
+  "description": "Aria plugin catalogue: portable workflows and shared MCP integrations.",
   "owner": {
     "name": "Arthera",
     "url": "https://github.com/artheras"
@@ -18,6 +18,16 @@
       "repository": "https://github.com/artheras/aria-plugins",
       "skills": [
         "./skills/commerce"
+      ]
+    },
+    {
+      "name": "finance",
+      "source": "./plugins/finance",
+      "version": "0.1.0",
+      "description": "Financial statements, disclosure evidence, risk metrics and simulated backtests through the shared Financial Service.",
+      "repository": "https://github.com/artheras/financial-service",
+      "skills": [
+        "./skills/finance"
       ]
     }
   ]

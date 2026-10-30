@@ -1,0 +1,11 @@
+{
+  "name": "finance",
+  "displayName": "Arthera Finance",
+  "version": "0.1.0",
+  "description": "Financial statements, disclosure evidence, risk metrics and simulated backtests through the shared Financial Service.",
+  "author": {
+    "name": "Arthera"
+  },
+  "repository": "https://github.com/artheras/financial-service",
+  "license": "Apache-2.0"
+}

@@ -46,3 +46,5 @@ See https://github.com/artheras/aria-plugins/blob/main/docs/aria-code.md for det
 To remove only a tool version, run `aria-plugins uninstall --dir VERSION_DIR`.
 Its MCP configuration entry is retained for explicit removal or disabling;
 skills, credentials, other versions and order data are preserved.
+
+The catalogue also includes the Finance skill and configuration templates. The Finance Python service is installed separately from artheras/financial-service; this bundle does not install it or enable external financial data access.

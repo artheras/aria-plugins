@@ -1,0 +1,12 @@
+{
+  "permissions": [
+    "read_financial_data",
+    "compute_financial_metrics",
+    "simulate_backtests"
+  ],
+  "scripts": {
+    "execution": "approval",
+    "network": false,
+    "workspace_write": false
+  }
+}

@@ -1,0 +1,1 @@
+Analyze the requested financial question using the finance skill and connected Financial Service tools. Return evidence, periods, assumptions and limitations. If the service is missing, give setup steps from the plugin README. No trading or publication is available.
