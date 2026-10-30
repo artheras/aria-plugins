@@ -2,7 +2,8 @@
   "permissions": [
     "read_financial_data",
     "compute_financial_metrics",
-    "simulate_backtests"
+    "simulate_backtests",
+    "read_broker_accounts"
   ],
   "scripts": {
     "execution": "approval",

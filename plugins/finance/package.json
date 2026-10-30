@@ -11,17 +11,24 @@
     "financial_parse_sec_facts",
     "financial_risk_metrics",
     "financial_backtest",
-    "financial_market_history"
+    "financial_market_history",
+    "financial_broker_connections",
+    "financial_broker_account",
+    "financial_broker_positions",
+    "financial_broker_orders"
   ],
   "permissions": [
     "read_financial_data",
     "compute_financial_metrics",
-    "simulate_backtests"
+    "simulate_backtests",
+    "read_broker_accounts"
   ],
   "required_env": [],
   "optional_env": [
     "FINANCIAL_SERVICE_NETWORK",
-    "EDGAR_USER_AGENT"
+    "EDGAR_USER_AGENT",
+    "FINANCIAL_SERVICE_HOME",
+    "FINANCIAL_SERVICE_BROKERS_ENABLED"
   ],
   "human_only_actions": [
     "enable_network",
