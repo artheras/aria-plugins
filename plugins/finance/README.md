@@ -44,8 +44,10 @@ Codex can use the MCP tools directly, or install this skill folder in its skill
 directory. codex.toml and .mcp.json show the same server in host-specific formats.
 No financial calculations are duplicated in these wrappers.
 
-The service exposes six tools listed in package.json. Networking defaults to off.
+The service exposes ten tools listed in package.json. Networking defaults to off.
 Supplied-data calculations work without market credentials. Only the host can
 enable FINANCIAL_SERVICE_NETWORK=1; SEC reads additionally need EDGAR_USER_AGENT.
 These are read-only data/analysis tools and simulated backtests, with no trading
 or publication capability. MCP validation failures are reported as errors.
+
+Broker account reads use per-user Financial Service profiles. Configure FINANCIAL_SERVICE_HOME and explicitly enable FINANCIAL_SERVICE_BROKERS_ENABLED; real connections also need FINANCIAL_SERVICE_NETWORK=1. Follow the service's broker connection guide. The catalogue does not collect broker credentials, run an OAuth callback, or authorize trading.
