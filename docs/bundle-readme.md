@@ -44,7 +44,9 @@ Install the matching skill in a compatible Aria Code session:
 ```
 
 Restart Aria after MCP registration. Use `$commerce:commerce` to request a draft.
-The minimum documented host baseline is 0.140.0; component registration is done
+The bundle's minimum Aria version (`minimum_aria_version` in bundle.json) is the
+highest minimum declared by its plugins: 0.165.0 for Finance, 0.140.0 for Commerce
+alone. Component registration is done
 by this helper, while skill discovery and model invocation belong to Aria Code.
 See https://github.com/artheras/aria-plugins/blob/main/docs/aria-code.md for details.
 
