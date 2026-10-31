@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type Manifest struct {
@@ -211,6 +212,64 @@ func ReadInstallation(directory string) (Installation, error) {
 	}
 	return i, nil
 }
+
+// writeBackup saves the previous configuration next to it under a new,
+// timestamped name. It never overwrites an earlier backup: each upgrade keeps
+// its own copy, and a name already taken gets a numbered suffix.
+func writeBackup(full string, raw []byte) (string, error) {
+	base := full + ".backup-" + time.Now().UTC().Format("20060102T150405Z")
+	for n := 0; n < 1000; n++ {
+		name := base
+		if n > 0 {
+			name = fmt.Sprintf("%s.%d", base, n)
+		}
+		backup, err := os.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", errors.New("configuration backup cannot be created")
+		}
+		_, err = backup.Write(raw)
+		closeErr := backup.Close()
+		if err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			os.Remove(name)
+			return "", err
+		}
+		return name, nil
+	}
+	return "", errors.New("too many configuration backups for this second; retry")
+}
+
+// InstallAndRegister installs a bundle, writes its standalone MCP template and,
+// when configPath is set, registers it in Aria's configuration. If any of that
+// fails, the version just installed is removed again, so the same command can
+// be re-run once the problem is fixed instead of failing on an existing version.
+func InstallAndRegister(archive, digest, destination, configPath string, replace bool) (Installation, error) {
+	i, err := Install(archive, digest, destination)
+	if err != nil {
+		return i, err
+	}
+	// Always emit a usable standalone template. Existing Aria state is touched
+	// only when the caller supplies its exact path.
+	err = WriteConfig(filepath.Join(i.Directory, "mcp_servers.json"), i.Binary, false)
+	if err == nil && configPath != "" {
+		if err = WriteConfig(configPath, i.Binary, replace); err != nil {
+			err = fmt.Errorf("MCP registration failed: %w", err)
+		}
+	}
+	if err != nil {
+		if removeErr := os.RemoveAll(i.Directory); removeErr != nil {
+			return i, fmt.Errorf("%w; the new version at %s could not be removed: %v", err, i.Directory, removeErr)
+		}
+		return Installation{}, fmt.Errorf("%w; the new version was removed, so the install can be re-run", err)
+	}
+	return i, nil
+}
+
 func WriteConfig(configPath, binary string, replace bool) error {
 	full, err := filepath.Abs(configPath)
 	if err != nil {
@@ -259,13 +318,7 @@ func WriteConfig(configPath, binary string, replace bool) error {
 		return err
 	}
 	if len(raw) > 0 {
-		backup, err := os.OpenFile(full+".backup", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-		if err != nil {
-			return errors.New("backup already exists or cannot be created; preserve it before retrying")
-		}
-		_, err = backup.Write(raw)
-		backup.Close()
-		if err != nil {
+		if _, err = writeBackup(full, raw); err != nil {
 			return err
 		}
 	}

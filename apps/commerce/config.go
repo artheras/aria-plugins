@@ -23,8 +23,12 @@ import (
 	"github.com/artheras/aria-plugins/packages/store"
 )
 
+// Config holds the service settings. MerchantToken is the bearer credential
+// of the MCP bridge (the AI agent); MerchantLoginToken is the human merchant's
+// browser login secret. They must differ so the agent can never mint a human
+// session and approve, capture or refund its own drafts.
 type Config struct {
-	Mode, PublicURL, SessionSecret, MerchantToken, DataDir                          string
+	Mode, PublicURL, SessionSecret, MerchantToken, MerchantLoginToken, DataDir      string
 	MerchantID, LegacyMerchantOwner, CatalogFile                                    string
 	Catalog                                                                         []sdk.Product
 	Drafter                                                                         agents.Drafter
@@ -51,6 +55,7 @@ func fromEnvironment(worker bool) (Config, error) {
 	if (os.Getenv("ARIA_AI") == "aria" || os.Getenv("ARIA_AI") == "demo") && (os.Getenv("K_SERVICE") != "" || os.Getenv("CLOUD_RUN_JOB") != "" || os.Getenv("VERCEL") != "") {
 		return c, errors.New("ARIA_AI=aria or demo is for a local machine and cannot be used on a hosted service")
 	}
+	c.MerchantLoginToken = os.Getenv("ARIA_MERCHANT_LOGIN_TOKEN")
 	c.MerchantID, c.LegacyMerchantOwner, c.CatalogFile = os.Getenv("ARIA_MERCHANT_ID"), os.Getenv("ARIA_LEGACY_MERCHANT_OWNER"), os.Getenv("ARIA_CATALOG_FILE")
 	if c.MerchantID != "" {
 		if err := merchantidentity.ValidateID(c.MerchantID); err != nil {
@@ -150,6 +155,9 @@ func fromEnvironment(worker bool) (Config, error) {
 	if c.MerchantToken != "" && len(c.MerchantToken) < 32 {
 		return c, errors.New("ARIA_MERCHANT_TOKEN must contain at least 32 characters")
 	}
+	if err := c.validateMerchantLogin(); err != nil {
+		return c, err
+	}
 	if c.SessionSecret != "" && len(c.SessionSecret) < 32 {
 		return c, errors.New("ARIA_SESSION_SECRET must contain at least 32 characters")
 	}
@@ -169,7 +177,7 @@ func fromEnvironment(worker bool) (Config, error) {
 		}
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
-			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_SESSION_SECRET")
+			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN", "ARIA_SESSION_SECRET")
 			if !ariaAI && !localParser && !vertexAI {
 				required = append(required, "AI_GATEWAY_MODEL")
 			}
@@ -236,6 +244,28 @@ func fromEnvironment(worker bool) (Config, error) {
 		c.SessionSecret = string(b)
 	}
 	return c, nil
+}
+
+// validateMerchantLogin keeps the human login secret separate from the agent
+// token. Equal values would let the MCP bridge sign in as the merchant and
+// approve, capture or refund on its own, so the service refuses to start.
+func (c Config) validateMerchantLogin() error {
+	if c.MerchantLoginToken == "" {
+		return nil
+	}
+	if len(c.MerchantLoginToken) < 32 {
+		return errors.New("ARIA_MERCHANT_LOGIN_TOKEN must contain at least 32 characters")
+	}
+	if c.MerchantLoginToken == c.MerchantToken {
+		return errors.New("ARIA_MERCHANT_LOGIN_TOKEN must differ from ARIA_MERCHANT_TOKEN: the agent token must never sign in as the merchant")
+	}
+	return nil
+}
+
+// loginEnabled reports whether a human merchant can sign in. It re-checks the
+// separation so a Config built in code cannot reopen the agent path.
+func (c Config) loginEnabled() bool {
+	return c.validateMerchantLogin() == nil && c.MerchantLoginToken != ""
 }
 
 func NewService(c Config) *workflow.Service {

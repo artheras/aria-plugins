@@ -2,10 +2,10 @@
   "version": 1,
   "skills": {
     "commerce:commerce": {
-      "sha256": "f38d17eb735cf6714e52a76911a6f7a92db3a6896b0427a81982d7407ec13e4b"
+      "sha256": "aba8afe54934b42fe50270140e825374e133a66d061d7a5c58e74bd9e72158e1"
     },
     "finance:finance": {
-      "sha256": "4b6b03fdb748a190aadfe39a54243549eb3a79e493d132188cd83849377624a2"
+      "sha256": "005787afe67eb23d3bae4b4b5851bd632dabaa0192009edef33acc6331aea8c4"
     }
   }
 }

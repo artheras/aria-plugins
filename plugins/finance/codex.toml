@@ -1,5 +1,2 @@
 [mcp_servers.arthera-finance]
 command = "arthera-financial-service"
-
-[mcp_servers.arthera-finance.env]
-FINANCIAL_SERVICE_NETWORK = "0"

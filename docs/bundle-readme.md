@@ -18,9 +18,14 @@ The helper creates a version directory, uses a literal absolute MCP binary path,
 preserves unrelated MCP servers, and creates a configuration backup. It does not
 start the bridge, modify installed skills, create a server, or store credentials.
 Supply `--replace` explicitly when switching an existing Commerce entry to a new
-version; retain the prior backup before creating another one.
+version. Each change keeps its own timestamped backup
+(`mcp_servers.json.backup-YYYYMMDDTHHMMSSZ`); earlier backups are never
+overwritten. If registration fails, the new version directory is removed again,
+so the same install command can be re-run after fixing the problem.
 
-Export ARIA_COMMERCE_URL and ARIA_MERCHANT_TOKEN in the shell that starts Aria.
+Export ARIA_COMMERCE_URL and ARIA_MERCHANT_TOKEN (the agent credential) in the shell
+that starts Aria. Never export ARIA_MERCHANT_LOGIN_TOKEN there: it is the human
+merchant's browser login and belongs only to the Commerce server process.
 For private Cloud Run, also configure ADC and ARIA_CLOUD_RUN_AUDIENCE as described
 in https://github.com/artheras/aria-plugins/blob/main/docs/cloud-run.md.
 
@@ -39,7 +44,9 @@ Install the matching skill in a compatible Aria Code session:
 ```
 
 Restart Aria after MCP registration. Use `$commerce:commerce` to request a draft.
-The minimum documented host baseline is 0.140.0; component registration is done
+The bundle's minimum Aria version (`minimum_aria_version` in bundle.json) is the
+highest minimum declared by its plugins: 0.165.0 for Finance, 0.140.0 for Commerce
+alone. Component registration is done
 by this helper, while skill discovery and model invocation belong to Aria Code.
 See https://github.com/artheras/aria-plugins/blob/main/docs/aria-code.md for details.
 

@@ -1,4 +1,17 @@
 {
+  "schema_version": "aria.skill-policy.v1",
+  "allowed_tools": [
+    "financial_service_info",
+    "financial_analyze_statements",
+    "financial_parse_sec_facts",
+    "financial_risk_metrics",
+    "financial_backtest",
+    "financial_market_history",
+    "financial_broker_connections",
+    "financial_broker_account",
+    "financial_broker_positions",
+    "financial_broker_orders"
+  ],
   "permissions": [
     "read_financial_data",
     "compute_financial_metrics",

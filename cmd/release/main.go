@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -20,6 +21,38 @@ import (
 	"github.com/artheras/aria-plugins/packages/distribution"
 	"github.com/artheras/aria-plugins/packages/sdk"
 )
+
+// minimumAriaVersion is the highest minimum_aria_version declared by the
+// bundled plugins, so the bundle never claims to work on a host one of its
+// plugins does not support.
+func minimumAriaVersion(root string) (string, error) {
+	paths, err := filepath.Glob(filepath.Join(root, "plugins", "*", "package.json"))
+	if err != nil || len(paths) == 0 {
+		return "", fmt.Errorf("no plugin package.json found")
+	}
+	best, bestParts := "", [3]int{-1, -1, -1}
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		var pkg struct {
+			Minimum string `json:"minimum_aria_version"`
+		}
+		if err = json.Unmarshal(data, &pkg); err != nil {
+			return "", fmt.Errorf("%s: %w", path, err)
+		}
+		if !distribution.VersionPattern.MatchString(pkg.Minimum) {
+			return "", fmt.Errorf("%s: invalid minimum_aria_version %q", path, pkg.Minimum)
+		}
+		var parts [3]int
+		fmt.Sscanf(pkg.Minimum, "%d.%d.%d", &parts[0], &parts[1], &parts[2])
+		if slices.Compare(parts[:], bestParts[:]) > 0 {
+			best, bestParts = pkg.Minimum, parts
+		}
+	}
+	return best, nil
+}
 
 func build(root, out, platform string) (string, error) {
 	parts := strings.Split(platform, "/")
@@ -72,7 +105,11 @@ func build(root, out, platform string) (string, error) {
 	}
 	files["README.md"] = filepath.Join(root, "docs", "bundle-readme.md")
 	files["LICENSE"] = filepath.Join(root, "LICENSE")
-	manifest := distribution.Manifest{Name: "commerce", Version: sdk.Version, ContractVersion: sdk.ContractVersion, GOOS: goos, GOARCH: arch, MinimumAriaVersion: "0.140.0", RequiredEnv: []string{"ARIA_COMMERCE_URL", "ARIA_MERCHANT_TOKEN"}}
+	minimum, err := minimumAriaVersion(root)
+	if err != nil {
+		return "", err
+	}
+	manifest := distribution.Manifest{Name: "commerce", Version: sdk.Version, ContractVersion: sdk.ContractVersion, GOOS: goos, GOARCH: arch, MinimumAriaVersion: minimum, RequiredEnv: []string{"ARIA_COMMERCE_URL", "ARIA_MERCHANT_TOKEN"}}
 	data, _ := json.MarshalIndent(manifest, "", "  ")
 	manifestPath := filepath.Join(tmp, "bundle.json")
 	os.WriteFile(manifestPath, append(data, '\n'), 0644)

@@ -17,7 +17,7 @@ import (
 func TestLimitsErrorContractAndLogsDoNotLeakSecrets(t *testing.T) {
 	storage, _ := store.NewFile(t.TempDir())
 	var logs bytes.Buffer
-	c := Config{Mode: "demo", PublicURL: "https://merchant.test", SessionSecret: strings.Repeat("s", 32), MerchantToken: strings.Repeat("m", 32), Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}, LoginLimit: 1, Logger: slog.New(slog.NewJSONHandler(&logs, nil))}
+	c := Config{Mode: "demo", PublicURL: "https://merchant.test", SessionSecret: strings.Repeat("s", 32), MerchantToken: strings.Repeat("m", 32), MerchantLoginToken: strings.Repeat("h", 32), Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}, LoginLimit: 1, Logger: slog.New(slog.NewJSONHandler(&logs, nil))}
 	s := New(c)
 	for _, status := range []int{401, 429} {
 		r := httptest.NewRequest("POST", "/api/login?secret=not-for-logs", strings.NewReader(`{"token":"private-input"}`))
@@ -37,7 +37,7 @@ func TestLimitsErrorContractAndLogsDoNotLeakSecrets(t *testing.T) {
 			t.Fatal("missing backoff")
 		}
 	}
-	if strings.Contains(logs.String(), "private-input") || strings.Contains(logs.String(), "not-for-logs") || strings.Contains(logs.String(), c.MerchantToken) {
+	if strings.Contains(logs.String(), "private-input") || strings.Contains(logs.String(), "not-for-logs") || strings.Contains(logs.String(), c.MerchantToken) || strings.Contains(logs.String(), c.MerchantLoginToken) {
 		t.Fatal("secret logged")
 	}
 	if !strings.Contains(logs.String(), "request_id") || !strings.Contains(logs.String(), "duration_ms") {
@@ -65,7 +65,7 @@ func TestReadinessDistinguishesLivenessAndUnavailableStorage(t *testing.T) {
 	}
 }
 func TestCloudRunRejectsEphemeralStorageAndWorkerNeedsNoAISecrets(t *testing.T) {
-	for _, key := range []string{"ARIA_MODE", "ARIA_STORE", "K_SERVICE", "CLOUD_RUN_JOB", "VERCEL", "PUBLIC_URL", "ARIA_SESSION_SECRET", "ARIA_MERCHANT_TOKEN", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"} {
+	for _, key := range []string{"ARIA_MODE", "ARIA_STORE", "K_SERVICE", "CLOUD_RUN_JOB", "VERCEL", "PUBLIC_URL", "ARIA_SESSION_SECRET", "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN", "PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"} {
 		t.Setenv(key, "")
 	}
 	t.Setenv("K_SERVICE", "commerce")

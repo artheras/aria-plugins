@@ -78,7 +78,9 @@ Registered the MCP bridge in $aria_home/mcp_servers.json (an existing file is ba
 
 Next, in the shell that starts Aria:
   export ARIA_COMMERCE_URL=...   # your Commerce server
-  export ARIA_MERCHANT_TOKEN=...
+  export ARIA_MERCHANT_TOKEN=... # agent credential: drafts only
+Never export ARIA_MERCHANT_LOGIN_TOKEN in that shell: it is your own browser
+login for approving and paying, and anything Aria's shell holds the agent can use.
 Then in Aria Code:
   /skills add artheras/aria-plugins --ref $tag
   /skills doctor

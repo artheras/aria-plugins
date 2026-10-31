@@ -1,4 +1,5 @@
 {
+  "schema_version": "aria.skill-policy.v1",
   "permissions": ["read_catalog", "draft_orders", "read_orders"],
   "scripts": {"execution": "approval", "network": false, "workspace_write": false}
 }

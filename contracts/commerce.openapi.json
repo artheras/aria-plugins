@@ -130,6 +130,7 @@
     "/api/login": {
       "post": {
         "summary": "Connect merchant browser session",
+        "description": "Human merchant login. The token is ARIA_MERCHANT_LOGIN_TOKEN, which must differ from the agent's ARIA_MERCHANT_TOKEN. The agent token and any request carrying an Authorization header are rejected with 401; when no separate login secret is configured, login is disabled and returns 503.",
         "operationId": "post__api_login",
         "responses": {
           "200": {
