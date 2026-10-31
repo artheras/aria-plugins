@@ -219,6 +219,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "configure ARIA_MERCHANT_TOKEN (at least 32 characters) on both Commerce and MCP")
 		os.Exit(1)
 	}
+	// The human login secret must never reach the agent. If it is in this
+	// process's environment, it is in the agent's shell too.
+	if os.Getenv("ARIA_MERCHANT_LOGIN_TOKEN") != "" {
+		fmt.Fprintln(os.Stderr, "ARIA_MERCHANT_LOGIN_TOKEN is visible to the agent; unset it in the shell that starts Aria and keep it only on the Commerce server")
+		os.Exit(1)
+	}
 	b := bridge{base: base, token: token, client: &http.Client{Timeout: 55 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	if audience := os.Getenv("ARIA_CLOUD_RUN_AUDIENCE"); audience != "" {
 		a, e := url.Parse(audience)

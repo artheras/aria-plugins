@@ -9,7 +9,7 @@ integration. Configure a separate merchant Sandbox service and record these chec
 Supply these environment variables through Secret Manager or a local secret store:
 
 - `ARIA_MODE=sandbox`, stable `ARIA_MERCHANT_ID`, exact HTTPS `PUBLIC_URL`.
-- Independent `ARIA_SESSION_SECRET` and `ARIA_MERCHANT_TOKEN` (32+ characters).
+- Independent `ARIA_SESSION_SECRET`, `ARIA_MERCHANT_TOKEN` (agent) and `ARIA_MERCHANT_LOGIN_TOKEN` (human browser login) (32+ characters, all different).
 - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and a registered `PAYPAL_WEBHOOK_ID`.
 - `AI_GATEWAY_MODEL` and `AI_GATEWAY_API_KEY` (or supported Vercel OIDC credential).
 - Dedicated Firestore project/database/collection and runtime ADC identity.

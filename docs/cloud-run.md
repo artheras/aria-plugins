@@ -39,7 +39,7 @@ gcloud builds submit --config=cloudbuild.yaml \
   --substitutions=_IMAGE=YOUR_REGION-docker.pkg.dev/YOUR_PROJECT/YOUR_REPOSITORY/aria-commerce,COMMIT_SHA=YOUR_COMMIT_SHA
 ```
 
-Copy the non-secret [service environment template](../deploy/cloud-run/service.env.yaml), replacing its project and exact browser origin. Set a stable `ARIA_SESSION_SECRET` through Secret Manager. For Sandbox, also configure a separate merchant token, PayPal Sandbox credentials, and AI Gateway model/key. Start with a separate private candidate service, using its own service name and service account. Initial IAM-protected HTTP smoke checks can use an authorised Google ID token. Private Cloud Run browser access needs an authenticated front door; a direct anonymous browser cannot open it.
+Copy the non-secret [service environment template](../deploy/cloud-run/service.env.yaml), replacing its project and exact browser origin. Set a stable `ARIA_SESSION_SECRET` through Secret Manager. For Sandbox, also configure a separate agent merchant token (`ARIA_MERCHANT_TOKEN`), a different human login secret (`ARIA_MERCHANT_LOGIN_TOKEN`), PayPal Sandbox credentials, and AI Gateway model/key. Start with a separate private candidate service, using its own service name and service account. Initial IAM-protected HTTP smoke checks can use an authorised Google ID token. Private Cloud Run browser access needs an authenticated front door; a direct anonymous browser cannot open it.
 
 For an existing Commerce service, follow Aria's candidate pattern: update the image with `--no-traffic --tag=commerce-candidate`, verify it, then explicitly promote. Candidate URLs need the matching `PUBLIC_URL`; cookies, Origin checks, and payment return URLs must all use that origin. Do not use Commerce settings on the relay service.
 
@@ -76,7 +76,7 @@ The scan is bounded to 100 pages by default. A limit hit exits nonzero rather th
 
 ## Private Cloud Run MCP calls
 
-Set `ARIA_COMMERCE_URL` to the service/candidate origin and a separate `ARIA_MERCHANT_TOKEN`. For an IAM-protected service, also set `ARIA_CLOUD_RUN_AUDIENCE` to the canonical Cloud Run service URL and configure ADC using an identity authorised to invoke that service. The Go SDK refreshes ID tokens.
+Set `ARIA_COMMERCE_URL` to the service/candidate origin and a separate `ARIA_MERCHANT_TOKEN`. Never give the bridge `ARIA_MERCHANT_LOGIN_TOKEN`; that secret is only for the human merchant's browser login. For an IAM-protected service, also set `ARIA_CLOUD_RUN_AUDIENCE` to the canonical Cloud Run service URL and configure ADC using an identity authorised to invoke that service. The Go SDK refreshes ID tokens.
 
 The bridge sends the Google ID token in `X-Serverless-Authorization`, while `Authorization` carries the Commerce merchant credential. These credentials have distinct purposes. Do not reuse Aria relay machine tokens or Google credentials as merchant tokens. A user ADC login alone is not guaranteed to support ID-token minting; use an appropriate service account or supported impersonation configuration. See [Cloud Run service authentication](https://cloud.google.com/run/docs/authenticating/service-to-service).
 

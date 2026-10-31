@@ -62,7 +62,7 @@ func newBrowser(t *testing.T, server *httptest.Server) *browser {
 func TestDemoWorkflowHumanBoundaryAndPersistence(t *testing.T) {
 	dir := t.TempDir()
 	storage, _ := store.NewFile(dir)
-	c := Config{Mode: "demo", SessionSecret: strings.Repeat("s", 32), MerchantToken: strings.Repeat("m", 32), Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}}
+	c := Config{Mode: "demo", SessionSecret: strings.Repeat("s", 32), MerchantToken: strings.Repeat("m", 32), MerchantLoginToken: strings.Repeat("h", 32), Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}}
 	var handler http.Handler
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { handler.ServeHTTP(w, r) }))
 	defer server.Close()

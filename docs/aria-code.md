@@ -34,17 +34,22 @@ make build
 make catalog-check
 export ARIA_COMMERCE_URL=http://127.0.0.1:4180
 export ARIA_MERCHANT_TOKEN="$(openssl rand -hex 32)"
-./bin/aria-commerce
+ARIA_MERCHANT_LOGIN_TOKEN="$(openssl rand -hex 32)" ./bin/aria-commerce
 ```
 
-This starts demo mode by default. Keep the generated merchant token in your own local configuration. The service, Aria MCP process, and browser merchant session must use the same value. Do not generate a different token while continuing to connect to the original server, and do not commit tokens to the repository.
+This starts demo mode by default. There are two different secrets:
+
+- `ARIA_MERCHANT_TOKEN` is the **agent** credential. The service and the Aria MCP process use the same value. It can read the catalogue and draft orders, never approve, capture, or refund.
+- `ARIA_MERCHANT_LOGIN_TOKEN` is the **human** merchant's browser login. Set it only on the Commerce server process (as above, not exported) and keep it in your password manager. It must differ from `ARIA_MERCHANT_TOKEN`; the service refuses to start if they are equal, and `/api/login` rejects the agent token.
+
+Do not generate different tokens while continuing to connect to the original server, and do not commit tokens to the repository.
 
 ## 3. Register the MCP tools
 
 Merge the server entry from [mcp.json](../plugins/commerce/mcp.json) into `mcp_servers.json` in your actual Aria state directory. Preserve other server entries.
 
 - Replace `command` with the literal absolute path to your built `bin/aria-commerce-mcp`.
-- Export the same `ARIA_COMMERCE_URL` and `ARIA_MERCHANT_TOKEN` in the shell that starts Aria Code.
+- Export the same `ARIA_COMMERCE_URL` and `ARIA_MERCHANT_TOKEN` in the shell that starts Aria Code. Never export `ARIA_MERCHANT_LOGIN_TOKEN` there: everything in that shell is visible to the agent.
 - The current Aria client expands `${VARIABLE_NAME}` in `args` and `env`, but not in `command`. Do not leave an environment placeholder in the command path.
 - Restart the Aria session after saving the configuration so it discovers the tools again.
 
@@ -58,7 +63,7 @@ In Aria Code, enter:
 $commerce:commerce Draft an order for 2 tees and 1 mug.
 ```
 
-After reading the catalogue and drafting the order, Aria returns an order ID. At `http://127.0.0.1:4180`, click **Merchant session**, enter the same merchant token, and open `/?order=RETURNED_ORDER_ID`. Review the invoice, then approve, check out, and simulate payment in the browser. These actions are not available to the agent through MCP.
+After reading the catalogue and drafting the order, Aria returns an order ID. At `http://127.0.0.1:4180`, click **Merchant session**, enter the merchant login token (`ARIA_MERCHANT_LOGIN_TOKEN`, not the agent token), and open `/?order=RETURNED_ORDER_ID`. Review the invoice, then approve, check out, and simulate payment in the browser. These actions are not available to the agent through MCP.
 
 Demo mode uses a deterministic parser, makes no AI calls, and moves no money. Configure AI Gateway and PayPal Sandbox using the [setup guide](setup.md). Missing configuration is reported rather than treated as a successful simulation.
 

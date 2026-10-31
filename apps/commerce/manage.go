@@ -42,7 +42,7 @@ func (s *Server) updateCatalog(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if s.config.MerchantToken == "" || id.owner != s.merchantOwner() {
+	if !s.config.loginEnabled() || id.owner != s.merchantOwner() {
 		fail(w, 403, "Catalogue updates require the connected merchant session.")
 		return
 	}

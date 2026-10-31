@@ -53,7 +53,7 @@ func New(c Config) *Server {
 	})
 	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
-		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.MerchantToken != "", "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
+		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.loginEnabled(), "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
 		if c.PayPalButtons {
 			cfg["paypal_client_id"] = c.PayPalClientID
 		}
@@ -255,8 +255,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid login request")
 		return
 	}
-	if s.config.MerchantToken == "" || subtle.ConstantTimeCompare([]byte(body.Token), []byte(s.config.MerchantToken)) != 1 {
-		fail(w, 401, "invalid merchant token")
+	if !s.config.loginEnabled() {
+		fail(w, 503, "merchant login is disabled: set ARIA_MERCHANT_LOGIN_TOKEN to a value different from ARIA_MERCHANT_TOKEN")
+		return
+	}
+	// The agent token (and any bearer request) never opens a human session.
+	if r.Header.Get("Authorization") != "" || (s.config.MerchantToken != "" && subtle.ConstantTimeCompare([]byte(body.Token), []byte(s.config.MerchantToken)) == 1) || subtle.ConstantTimeCompare([]byte(body.Token), []byte(s.config.MerchantLoginToken)) != 1 {
+		fail(w, 401, "invalid merchant login token")
 		return
 	}
 	id := s.setSession(w, s.merchantOwner())

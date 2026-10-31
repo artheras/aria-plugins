@@ -14,9 +14,9 @@ Cloud Run service from the simulated demo; nothing about the demo changes.
 
 Stored **without a trailing newline** (`printf %s`, not `echo`): Cloud Run passes a secret to the
 container byte for byte, so a newline makes the token the service holds differ from the one a
-client read with `$(...)`, and every merchant login fails as "invalid merchant token".
+client read with `$(...)`, and every merchant login fails as "invalid merchant login token".
 
-- `aria-commerce-sandbox-session-secret`, `aria-commerce-sandbox-merchant-token`: random, 64 hex characters
+- `aria-commerce-sandbox-session-secret`, `aria-commerce-sandbox-merchant-token`, `aria-commerce-sandbox-merchant-login-token`: random, 64 hex characters, all different. The merchant token is the agent (MCP bridge) credential; the login token is the human merchant's browser login and is never given to the agent.
 - `aria-commerce-paypal-sandbox-client-id`, `aria-commerce-paypal-sandbox-client-secret`: the Sandbox REST app (Transaction search enabled)
 - `aria-commerce-sandbox-paypal-webhook-id`: the webhook registered below
 
@@ -33,7 +33,7 @@ gcloud run deploy aria-commerce-sandbox --region=REGION --image=IMAGE:TAG \
   --service-account=aria-commerce-runtime@PROJECT.iam.gserviceaccount.com \
   --port=4180 --memory=512Mi --cpu=1 --max-instances=2 --concurrency=20 --allow-unauthenticated \
   --set-env-vars="ARIA_MODE=sandbox,ARIA_AI=vertex,PAYPAL_BUTTONS=1,ARIA_STORE=firestore,GOOGLE_CLOUD_PROJECT=PROJECT,ARIA_FIRESTORE_DATABASE=DB,ARIA_FIRESTORE_COLLECTION=aria_commerce_sandbox_records,PUBLIC_URL=https://SERVICE-HASH-REGION.a.run.app,ARIA_BIND_ALL=1,ARIA_MERCHANT_ID=aria-commerce-sandbox" \
-  --set-secrets="ARIA_SESSION_SECRET=aria-commerce-sandbox-session-secret:latest,ARIA_MERCHANT_TOKEN=aria-commerce-sandbox-merchant-token:latest,PAYPAL_CLIENT_ID=aria-commerce-paypal-sandbox-client-id:latest,PAYPAL_CLIENT_SECRET=aria-commerce-paypal-sandbox-client-secret:latest"
+  --set-secrets="ARIA_SESSION_SECRET=aria-commerce-sandbox-session-secret:latest,ARIA_MERCHANT_TOKEN=aria-commerce-sandbox-merchant-token:latest,ARIA_MERCHANT_LOGIN_TOKEN=aria-commerce-sandbox-merchant-login-token:latest,PAYPAL_CLIENT_ID=aria-commerce-paypal-sandbox-client-id:latest,PAYPAL_CLIENT_SECRET=aria-commerce-paypal-sandbox-client-secret:latest"
 ```
 
 `PUBLIC_URL` must be the exact origin the browser uses (cookies, Origin checks, PayPal return URLs).

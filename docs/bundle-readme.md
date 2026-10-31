@@ -20,7 +20,9 @@ start the bridge, modify installed skills, create a server, or store credentials
 Supply `--replace` explicitly when switching an existing Commerce entry to a new
 version; retain the prior backup before creating another one.
 
-Export ARIA_COMMERCE_URL and ARIA_MERCHANT_TOKEN in the shell that starts Aria.
+Export ARIA_COMMERCE_URL and ARIA_MERCHANT_TOKEN (the agent credential) in the shell
+that starts Aria. Never export ARIA_MERCHANT_LOGIN_TOKEN there: it is the human
+merchant's browser login and belongs only to the Commerce server process.
 For private Cloud Run, also configure ADC and ARIA_CLOUD_RUN_AUDIENCE as described
 in https://github.com/artheras/aria-plugins/blob/main/docs/cloud-run.md.
 

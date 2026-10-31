@@ -13,6 +13,9 @@ RUN apk add --no-cache ca-certificates && adduser -D -u 10001 aria && mkdir /dat
 COPY --from=build /out/server /usr/local/bin/aria-commerce
 COPY --from=build /out/worker /usr/local/bin/aria-commerce-worker
 USER aria
+# Secrets come from the platform (e.g. Secret Manager), never the image:
+# ARIA_SESSION_SECRET, ARIA_MERCHANT_TOKEN (agent/MCP bridge credential) and
+# ARIA_MERCHANT_LOGIN_TOKEN (human browser login; must differ from the agent token).
 ENV ARIA_BIND_ALL=1 ARIA_DATA_DIR=/data PORT=4180
 EXPOSE 4180
 VOLUME ["/data"]

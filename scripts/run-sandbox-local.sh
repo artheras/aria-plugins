@@ -25,9 +25,10 @@ PAYPAL_CLIENT_ID=$(secret aria-commerce-paypal-sandbox-client-id)
 PAYPAL_CLIENT_SECRET=$(secret aria-commerce-paypal-sandbox-client-secret)
 # Fresh per run: this local server shares nothing with the deployed one.
 ARIA_MERCHANT_TOKEN=$(openssl rand -hex 24)
+ARIA_MERCHANT_LOGIN_TOKEN=$(openssl rand -hex 24)
 ARIA_SESSION_SECRET=$(openssl rand -hex 24)
 
-export PAYPAL_CLIENT_ID PAYPAL_CLIENT_SECRET ARIA_MERCHANT_TOKEN ARIA_SESSION_SECRET
+export PAYPAL_CLIENT_ID PAYPAL_CLIENT_SECRET ARIA_MERCHANT_TOKEN ARIA_MERCHANT_LOGIN_TOKEN ARIA_SESSION_SECRET
 export ARIA_MODE=sandbox ARIA_AI="$mode" PAYPAL_BUTTONS=1
 export ARIA_MERCHANT_ID=${ARIA_MERCHANT_ID:-store-1}
 export PORT=${PORT:-4180}
@@ -35,5 +36,5 @@ export PUBLIC_URL=http://127.0.0.1:$PORT
 export ARIA_DATA_DIR=${ARIA_DATA_DIR:-data/sandbox}
 
 echo "Commerce (PayPal Sandbox, drafter: $mode) on $PUBLIC_URL"
-echo "Merchant login token for this run (random, local only): $ARIA_MERCHANT_TOKEN"
+echo "Merchant browser login token for this run (random, local only): $ARIA_MERCHANT_LOGIN_TOKEN"
 exec go run ./cmd/server

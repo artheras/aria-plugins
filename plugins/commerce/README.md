@@ -15,7 +15,7 @@ Version: **0.4.0**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, cr
 
 In Aria Code, run `/skills add artheras/aria-plugins`, then `/skills doctor`. Invoke `$commerce:commerce` in a request. The current Aria installer loads verified skills; it does **not** automatically load the command file, build Go binaries, register MCP, or start the web service. Use the [Aria Code setup guide](../../docs/aria-code.md).
 
-Build the service and MCP binaries with `make build` at the repository root. The service and bridge use the same `ARIA_MERCHANT_TOKEN` and `ARIA_COMMERCE_URL`. No approval, checkout, or capture tool is exposed to the agent.
+Build the service and MCP binaries with `make build` at the repository root. The service and bridge use the same `ARIA_MERCHANT_TOKEN` and `ARIA_COMMERCE_URL`. The human merchant signs in to the browser with a different `ARIA_MERCHANT_LOGIN_TOKEN`, set only on the service and never given to the agent. No approval, checkout, or capture tool is exposed to the agent.
 
 The Claude manifest and .mcp.json are supplied for cross-client reuse; a full Claude Code installation has not been verified. Installing a plugin does not supply payment credentials or authorize a payment.
 

@@ -54,7 +54,7 @@ All amounts are integer cents in JSON. No endpoint accepts a client price.
 | GET /api/config | Public mode and module information |
 | GET /api/catalog | Trusted sample catalogue |
 | GET /api/session | Session status and CSRF value; creates demo browser session |
-| POST /api/login | {token}; connect merchant browser session |
+| POST /api/login | {token}; connect merchant browser session with `ARIA_MERCHANT_LOGIN_TOKEN` (the agent token and bearer requests are rejected) |
 | POST /api/orders | {prompt}; produce unapproved draft |
 | GET /api/orders/{id} | Read a session/merchant-owned order |
 | POST /api/orders/{id}/approve | {digest}; browser-only approval |

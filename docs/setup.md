@@ -22,7 +22,7 @@ Keep secrets in local configuration or your hosting provider's environment setti
 1. Sign in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/). Create a **Sandbox REST application** and obtain its client ID and secret.
 2. Create/use a Sandbox business account for the merchant and a separate personal Sandbox account for the buyer.
 3. Set `ARIA_MODE=sandbox`, `PAYPAL_CLIENT_ID`, and `PAYPAL_CLIENT_SECRET`.
-4. Configure the AI settings below and independent random `ARIA_SESSION_SECRET` and `ARIA_MERCHANT_TOKEN` values of at least 32 characters each.
+4. Configure the AI settings below and independent random `ARIA_SESSION_SECRET`, `ARIA_MERCHANT_TOKEN` (agent/MCP credential), and `ARIA_MERCHANT_LOGIN_TOKEN` (human browser login; must differ from the agent token) values of at least 32 characters each.
 5. Set `PUBLIC_URL` to the exact browser origin. For a local interactive checkout use `http://127.0.0.1:4180`; incoming webhooks require a publicly reachable HTTPS deployment.
 6. Restart the service, connect the merchant session in the browser, draft and review an order, and create checkout.
 7. Open the generated PayPal Sandbox link. Sign in with the Sandbox buyer, approve, return to Commerce, and click **Capture & verify Sandbox payment**.
@@ -51,7 +51,7 @@ The model selects SKUs and quantities; it never supplies trusted prices or recei
 
 ## 4. Aria MCP bridge
 
-Build both binaries with `make build`. Set a random `ARIA_MERCHANT_TOKEN` of at least 32 characters on both the Commerce server and the MCP process, even when testing MCP in demo mode.
+Build both binaries with `make build`. Set a random `ARIA_MERCHANT_TOKEN` of at least 32 characters on both the Commerce server and the MCP process, even when testing MCP in demo mode. Do not give the MCP process or the shell that starts Aria `ARIA_MERCHANT_LOGIN_TOKEN`; the browser login is for the human merchant only.
 
 Set the configuration's `command` to the **literal absolute path** of `bin/aria-commerce-mcp`, and export `ARIA_COMMERCE_URL` with the server's origin. Merge [examples/mcp_servers.json](../examples/mcp_servers.json) into the actual Aria home directory's `mcp_servers.json`; preserve other server entries. Aria home is `ARIA_HOME` if set, the existing legacy `~/.arthera` directory, or `~/.aria-code` for new users. The current Aria client expands environment placeholders in `args` and `env`, **not command**.
 

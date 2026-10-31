@@ -33,7 +33,8 @@ Copy `.env.example` to `.env` and configure locally:
 | AI_GATEWAY_API_KEY | Vercel AI Gateway API key |
 | AI_GATEWAY_MODEL | Available model ID supporting JSON object output |
 | ARIA_SESSION_SECRET | Independent random value, at least 32 characters |
-| ARIA_MERCHANT_TOKEN | Another independent random value, at least 32 characters |
+| ARIA_MERCHANT_TOKEN | Agent (MCP bridge) credential: another independent random value, at least 32 characters |
+| ARIA_MERCHANT_LOGIN_TOKEN | Human merchant browser login: a third independent value, at least 32 characters, never given to the agent |
 | PAYPAL_WEBHOOK_ID | Optional for browser capture; required for webhook processing |
 
 The service reads exported variables and does not automatically load `.env`:
