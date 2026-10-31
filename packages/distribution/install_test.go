@@ -82,11 +82,75 @@ func TestMCPConfigPreservesOtherServersAndRequiresExplicitReplacement(t *testing
 	if !doc.Other || len(doc.Servers) != 2 || doc.Servers[0].Command != "keep-me" {
 		t.Fatal("existing configuration changed")
 	}
-	backup, _ := os.ReadFile(config + ".backup")
+	backups, _ := filepath.Glob(config + ".backup-*")
+	if len(backups) != 1 {
+		t.Fatal("expected one backup", backups)
+	}
+	backup, _ := os.ReadFile(backups[0])
 	if !bytes.Equal(original, backup) {
 		t.Fatal("backup does not match original")
 	}
 	if WriteConfig(config, "/another/mcp", false) == nil {
 		t.Fatal("implicit replacement accepted")
+	}
+}
+
+func TestUpgradeKeepsEveryBackupAndAFailedRegistrationCanBeRetried(t *testing.T) {
+	path, sum, root := testBundle(t, "")
+	config := filepath.Join(root, "mcp_servers.json")
+	original := []byte(`{"servers":[{"name":"other","command":"keep-me"}]}`)
+	os.WriteFile(config, original, 0600)
+	// A backup left by an earlier installer must neither block nor be replaced.
+	legacy := []byte("legacy backup")
+	os.WriteFile(config+".backup", legacy, 0600)
+
+	first, err := InstallAndRegister(path, sum, filepath.Join(root, "first"), config, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	afterFirst, _ := os.ReadFile(config)
+	// install.sh always passes --replace; the second upgrade (same second, so
+	// the timestamp collides) must still register and keep both backups.
+	second, err := InstallAndRegister(path, sum, filepath.Join(root, "second"), config, true)
+	if err != nil {
+		t.Fatal("second registration failed:", err)
+	}
+	if kept, _ := os.ReadFile(config + ".backup"); !bytes.Equal(kept, legacy) {
+		t.Fatal("earlier backup overwritten")
+	}
+	backups, _ := filepath.Glob(config + ".backup-*")
+	if len(backups) != 2 {
+		t.Fatal("each upgrade needs its own backup", backups)
+	}
+	var contents [][]byte
+	for _, name := range backups {
+		data, _ := os.ReadFile(name)
+		contents = append(contents, data)
+	}
+	if !(bytes.Equal(contents[0], original) && bytes.Equal(contents[1], afterFirst)) && !(bytes.Equal(contents[1], original) && bytes.Equal(contents[0], afterFirst)) {
+		t.Fatal("backups do not hold the previous configurations")
+	}
+	var doc struct {
+		Servers []struct{ Name, Command string } `json:"servers"`
+	}
+	data, _ := os.ReadFile(config)
+	json.Unmarshal(data, &doc)
+	if len(doc.Servers) != 2 || doc.Servers[1].Command != second.Binary || doc.Servers[1].Command == first.Binary {
+		t.Fatal("upgrade did not point Aria at the new version", doc.Servers)
+	}
+
+	// A failed registration leaves no half-installed version behind.
+	broken := filepath.Join(root, "broken.json")
+	os.WriteFile(broken, []byte("{not json"), 0600)
+	destination := filepath.Join(root, "retry")
+	if _, err = InstallAndRegister(path, sum, destination, broken, true); err == nil {
+		t.Fatal("invalid configuration accepted")
+	}
+	if _, err = os.Stat(filepath.Join(destination, "0.4.0")); !os.IsNotExist(err) {
+		t.Fatal("failed registration left the version installed", err)
+	}
+	os.WriteFile(broken, original, 0600)
+	if _, err = InstallAndRegister(path, sum, destination, broken, true); err != nil {
+		t.Fatal("re-running after a failed registration failed:", err)
 	}
 }

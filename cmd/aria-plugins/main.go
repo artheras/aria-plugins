@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -108,20 +107,11 @@ func run(args []string) error {
 	}
 	switch args[0] {
 	case "install":
-		i, err := distribution.Install(*archive, *checksum, *directory)
+		// Existing Aria state is touched only when the user supplies its exact
+		// --config path. A failed registration leaves no half-installed version.
+		i, err := distribution.InstallAndRegister(*archive, *checksum, *directory, *config, *replace)
 		if err != nil {
 			return err
-		}
-		// Always emit a usable standalone template. Existing Aria state is touched
-		// only when the user supplies its exact --config path.
-		if err = distribution.WriteConfig(filepath.Join(i.Directory, "mcp_servers.json"), i.Binary, false); err != nil {
-			return err
-		}
-		if *config != "" {
-			if err = distribution.WriteConfig(*config, i.Binary, *replace); err != nil {
-				emit(i)
-				return fmt.Errorf("bundle installed; MCP registration needs attention: %w", err)
-			}
 		}
 		emit(i)
 		return nil
