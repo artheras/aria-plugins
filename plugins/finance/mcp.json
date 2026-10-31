@@ -4,9 +4,6 @@
       "name": "arthera-finance",
       "command": "arthera-financial-service",
       "args": [],
-      "env": {
-        "FINANCIAL_SERVICE_NETWORK": "0"
-      },
       "enabled": true,
       "description": "Financial statements, disclosure evidence, risk metrics and simulated backtests through the shared Financial Service."
     }
