@@ -1,17 +1,17 @@
-# Aria Plugins 0.4.0
+# Aria Plugins 0.5.0
 
-Commerce now supports a stable merchant identity, persisted product management,
-owner-scoped order history and search, invoice revision with renewed approval,
-unstarted-order cancellation and expiry, manual recovery review, and verified
-full-refund handling. Unknown refund outcomes are reconciled without an automatic
-second refund. Partial refunds and failed capture states require provider review.
+The catalogue includes Commerce, Finance and Computer Use portable workflows.
+Computer Use connects to the local `aria-computer-use` MCP executable from
+Aria Code 0.166.0 or later, installed with the browser extra and Chromium.
+The Go release bundles contain the workflow and host templates, not Python or
+Chromium. Its browser session is isolated and restricted to user-configured
+origins; every navigation and input action requires native macOS approval.
+No desktop input or unattended publishing is exposed by this plugin.
 
-Versioned macOS, Linux and Windows bundles include precompiled Go MCP tools, an
-installation/configuration helper, integrity locks, checksums and public schemas.
-`aria-plugins doctor` checks configuration, MCP discovery and read-only service
-connectivity. Three MCP tools remain exposed; monetary actions remain browser-only.
+Aria Code, Codex and Claude Code host templates are included. Native and Python
+Aria Code paths forward browser observations and images to vision-capable models.
+The installer validates the catalogue, generated skill mirror and integrity locks.
 
-Existing deployments must review the stable-owner migration guide before changing
-merchant identity or rotating secrets. The public Demo remains a simulation.
-Real AI, PayPal Sandbox transactions and provider failure recovery require the
-live checklist and credentials; local tests use deterministic/mock providers.
+Commerce and Finance retain their separate permissions and service requirements.
+No provider credentials are included, and no external transactions or publishing
+are enabled by installing the catalogue.

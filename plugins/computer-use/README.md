@@ -19,4 +19,4 @@ The browser remains open across calls within one MCP process, uses its own tempo
 
 Actions require an observation less than 60 seconds old with an unchanged URL and DOM. After an action, read the new observation and screenshot to verify the result. Dynamic pages may require another observation. This release does not control native desktop apps, manage background schedules or auto-publish content. OS desktop tools already in Aria Code retain their separate approval rules.
 
-Aria Code's Python CLI supports the returned PNG images. Its current native Go MCP path exposes text observations; full image forwarding in that path remains separate work. Codex and Claude Code receive standard MCP image blocks according to their own model support.
+Aria Code's Python CLI and native Go runtime forward returned images to vision-capable models. Native image bytes are bounded and validated, and are kept out of tool-result JSON/events. Codex and Claude Code receive standard MCP image blocks according to their own model support.
