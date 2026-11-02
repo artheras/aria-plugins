@@ -97,7 +97,7 @@ func Install(archive, digest, destination string) (Installation, error) {
 		if name == "" || path.Clean(name) != name || strings.Contains(name, "\\") || strings.Contains(name, ":") || strings.HasPrefix(name, "/") || strings.HasPrefix(name, "../") || !entry.Mode().IsRegular() || entries[name] != nil {
 			return result, errors.New("bundle contains unsafe or duplicated paths")
 		}
-		if !(strings.HasPrefix(name, "bin/") || strings.HasPrefix(name, "contracts/") || strings.HasPrefix(name, "plugins/commerce/") || strings.HasPrefix(name, "skills/commerce/") || strings.HasPrefix(name, "plugins/finance/") || strings.HasPrefix(name, "skills/finance/") || strings.HasPrefix(name, ".claude-plugin/") || name == "bundle.json" || name == "README.md" || name == "LICENSE") {
+		if !(strings.HasPrefix(name, "bin/") || strings.HasPrefix(name, "contracts/") || strings.HasPrefix(name, "plugins/commerce/") || strings.HasPrefix(name, "skills/commerce/") || strings.HasPrefix(name, "plugins/finance/") || strings.HasPrefix(name, "skills/finance/") || strings.HasPrefix(name, "plugins/computer-use/") || strings.HasPrefix(name, "skills/computer-use/") || strings.HasPrefix(name, ".claude-plugin/") || name == "bundle.json" || name == "README.md" || name == "LICENSE") {
 			return result, errors.New("bundle contains unregistered components")
 		}
 		total += entry.UncompressedSize64

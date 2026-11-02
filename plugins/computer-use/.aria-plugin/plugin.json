@@ -1,0 +1,18 @@
+{
+  "name": "computer-use",
+  "displayName": "Aria Computer Use",
+  "version": "0.1.0",
+  "description": "Operate an isolated local browser with approved actions and fresh page observations.",
+  "capabilities": [
+    "commands",
+    "skills"
+  ],
+  "permissions": [
+    "browser_observe",
+    "browser_control"
+  ],
+  "entrypoints": {
+    "commands": "commands/",
+    "skills": "skills/"
+  }
+}
