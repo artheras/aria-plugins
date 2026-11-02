@@ -1,0 +1,1 @@
+Use the computer-use skill and connected Aria Computer Use tools to perform the requested browser task. Inspect permissions first, observe before acting, and verify the resulting page. Do not treat approval of a draft as approval to publish it.

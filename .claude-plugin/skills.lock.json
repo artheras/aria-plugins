@@ -2,10 +2,13 @@
   "version": 1,
   "skills": {
     "commerce:commerce": {
-      "sha256": "aba8afe54934b42fe50270140e825374e133a66d061d7a5c58e74bd9e72158e1"
+      "sha256": "e44e245a5fdd8a6f4ed8839ed79d6c6d9bbaeb94003ec4fa22945b248038f00a"
+    },
+    "computer-use:computer-use": {
+      "sha256": "e4213d5389f5c12ada42ec61ecec54fca5da3a7ba874e1cdcfa55d96b30e09b7"
     },
     "finance:finance": {
-      "sha256": "005787afe67eb23d3bae4b4b5851bd632dabaa0192009edef33acc6331aea8c4"
+      "sha256": "fe7d375d73486274223185a5f7850d7d86e0b6d0d05e6f94a24a73c77bb74e35"
     }
   }
 }

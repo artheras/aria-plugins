@@ -22,13 +22,30 @@ func testBundle(t *testing.T, extra string) (string, string, string) {
 	z := zip.NewWriter(&buffer)
 	manifest, _ := json.Marshal(Manifest{Name: "commerce", Version: "0.4.0", ContractVersion: "1", GOOS: runtime.GOOS, GOARCH: runtime.GOARCH})
 	files := map[string][]byte{"bundle.json": manifest, "bin/aria-commerce-mcp" + Extension(runtime.GOOS): []byte("binary fixture")}
-	for _, name := range []string{".claude-plugin/marketplace.json", ".claude-plugin/skills.lock.json", "plugins/commerce/.aria-plugin/plugin.json", "plugins/commerce/.claude-plugin/plugin.json", "plugins/commerce/README.md", "plugins/commerce/commands/commerce.md", "plugins/commerce/skills/commerce/SKILL.md", "plugins/commerce/skills/commerce/skill-policy.json", "skills/commerce/SKILL.md", "skills/commerce/skill-policy.json", "plugins/finance/.aria-plugin/plugin.json", "plugins/finance/.claude-plugin/plugin.json", "plugins/finance/README.md", "plugins/finance/commands/finance.md", "plugins/finance/skills/finance/SKILL.md", "plugins/finance/skills/finance/skill-policy.json", "skills/finance/SKILL.md", "skills/finance/skill-policy.json"} {
-		data, err := os.ReadFile(filepath.Join("..", "..", filepath.FromSlash(name)))
+	for _, directory := range []string{".claude-plugin", "plugins", "skills"} {
+		err := filepath.WalkDir(filepath.Join("..", "..", directory), func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			name, err := filepath.Rel(filepath.Join("..", ".."), path)
+			if err != nil {
+				return err
+			}
+			files[filepath.ToSlash(name)] = data
+			return nil
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		files[name] = data
 	}
+
 	if extra != "" {
 		files[extra] = []byte("escape")
 	}
@@ -51,8 +68,8 @@ func TestInstallChecksumAndPathBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(i.Directory, "skills", "finance", "SKILL.md")); err != nil {
-		t.Fatal("finance workflow missing from installed multi-plugin catalogue", err)
+	if _, err := os.Stat(filepath.Join(i.Directory, "skills", "computer-use", "SKILL.md")); err != nil {
+		t.Fatal("computer-use workflow missing from installed multi-plugin catalogue", err)
 	}
 	if _, err = ReadInstallation(i.Directory); err != nil {
 		t.Fatal(err)

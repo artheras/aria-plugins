@@ -1,0 +1,11 @@
+{
+  "name": "computer-use",
+  "displayName": "Aria Computer Use",
+  "version": "0.1.0",
+  "description": "Operate an isolated local browser with approved actions and fresh page observations.",
+  "author": {
+    "name": "Arthera"
+  },
+  "repository": "https://github.com/artheras/aria-code",
+  "license": "Apache-2.0"
+}

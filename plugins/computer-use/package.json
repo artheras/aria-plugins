@@ -1,0 +1,30 @@
+{
+  "$schema": "../../contracts/plugin-package.schema.json",
+  "name": "computer-use",
+  "version": "0.1.0",
+  "contract_version": "1",
+  "minimum_aria_version": "0.165.0",
+  "mcp_protocol_version": "2024-11-05",
+  "tools": [
+    "browser_capabilities",
+    "browser_open",
+    "browser_observe",
+    "browser_click",
+    "browser_fill",
+    "browser_press",
+    "browser_close"
+  ],
+  "permissions": [
+    "browser_observe",
+    "browser_control"
+  ],
+  "required_env": [],
+  "optional_env": [
+    "ARIA_COMPUTER_ORIGINS"
+  ],
+  "human_only_actions": [
+    "configure_allowed_origins",
+    "approve_browser_action",
+    "publish_content"
+  ]
+}

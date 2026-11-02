@@ -1,0 +1,21 @@
+{
+  "permissions": [
+    "browser_observe",
+    "browser_control"
+  ],
+  "scripts": {
+    "execution": "approval",
+    "network": false,
+    "workspace_write": false
+  },
+  "schema_version": "aria.skill-policy.v1",
+  "allowed_tools": [
+    "browser_capabilities",
+    "browser_open",
+    "browser_observe",
+    "browser_click",
+    "browser_fill",
+    "browser_press",
+    "browser_close"
+  ]
+}

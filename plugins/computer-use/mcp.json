@@ -1,0 +1,12 @@
+{
+  "servers": [
+    {
+      "name": "aria-computer-use",
+      "command": "aria-computer-use",
+      "args": [],
+      "enabled": true,
+      "description": "Operate an isolated local browser with approved actions and fresh page observations.",
+      "timeout": 120
+    }
+  ]
+}
