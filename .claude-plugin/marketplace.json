@@ -6,7 +6,7 @@
     "url": "https://github.com/artheras"
   },
   "metadata": {
-    "version": "0.4.0",
+    "version": "0.5.0",
     "repository": "https://github.com/artheras/aria-plugins"
   },
   "plugins": [
@@ -28,6 +28,16 @@
       "repository": "https://github.com/artheras/financial-service",
       "skills": [
         "./skills/finance"
+      ]
+    },
+    {
+      "name": "computer-use",
+      "source": "./plugins/computer-use",
+      "version": "0.1.0",
+      "description": "Operate an isolated local browser with approved actions and fresh page observations.",
+      "repository": "https://github.com/artheras/aria-code",
+      "skills": [
+        "./skills/computer-use"
       ]
     }
   ]

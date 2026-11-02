@@ -1,10 +1,10 @@
-# Aria Plugins 0.4.0 — Commerce tools
+# Aria Plugins 0.5.0 — Portable plugins
 
 This package contains the Go MCP bridge, the `aria-plugins` installation helper,
 the versioned Commerce workflow, integrity locks, and public JSON contracts.
 
 1. Download the ZIP for your operating system and architecture, plus SHA256SUMS,
-   from https://github.com/artheras/aria-plugins/releases/tag/v0.4.0.
+   from https://github.com/artheras/aria-plugins/releases/tag/v0.5.0.
 2. Verify the checksum before running the extracted installation helper.
 3. Install into a directory you own:
 
@@ -30,7 +30,7 @@ For private Cloud Run, also configure ADC and ARIA_CLOUD_RUN_AUDIENCE as describ
 in https://github.com/artheras/aria-plugins/blob/main/docs/cloud-run.md.
 
 ```sh
-./bin/aria-plugins doctor --dir /absolute/path/to/aria-plugin-tools/0.4.0
+./bin/aria-plugins doctor --dir /absolute/path/to/aria-plugin-tools/0.5.0
 ```
 
 Doctor negotiates MCP, checks the three tools, and makes one read-only catalogue
@@ -39,7 +39,7 @@ call. It does not approve, capture or refund a payment.
 Install the matching skill in a compatible Aria Code session:
 
 ```text
-/skills add artheras/aria-plugins --ref v0.4.0
+/skills add artheras/aria-plugins --ref v0.5.0
 /skills doctor
 ```
 
