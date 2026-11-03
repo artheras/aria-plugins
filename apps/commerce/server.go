@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/artheras/aria-plugins/packages/agents"
 	"github.com/artheras/aria-plugins/packages/sdk"
 )
 
@@ -53,7 +54,7 @@ func New(c Config) *Server {
 	})
 	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
-		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.loginEnabled(), "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
+		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.loginEnabled(), "host_draft_items": true, "server_text_drafting": c.Drafter.Name() != (agents.Host{}).Name(), "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
 		if c.PayPalButtons {
 			cfg["paypal_client_id"] = c.PayPalClientID
 		}
@@ -291,16 +292,23 @@ func (s *Server) draft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Prompt string `json:"prompt"`
+		Prompt string           `json:"prompt"`
+		Items  *[]sdk.Selection `json:"items"`
 	}
-	if decode(r, &body) != nil || len(body.Prompt) < 3 || len(body.Prompt) > 2000 {
-		fail(w, 400, "prompt must contain 3 to 2000 characters")
+	if decode(r, &body) != nil || (body.Items != nil && body.Prompt != "") || (body.Items == nil && (len(body.Prompt) < 3 || len(body.Prompt) > 2000)) {
+		fail(w, 400, "provide exactly one of prompt (3 to 2000 characters) or items")
 		return
 	}
 	if !s.quota(w, r, "draft-global-day", "all", s.config.dailyLimit(), 24*time.Hour) || !s.quota(w, r, "draft-global-minute", "all", s.config.globalLimit(), time.Minute) || !s.quota(w, r, "draft-owner-minute", id.owner, s.config.draftLimit(), time.Minute) || !s.quota(w, r, "draft-owner-day", id.owner, s.config.ownerDailyLimit(), 24*time.Hour) {
 		return
 	}
-	order, err := s.service.Draft(r.Context(), actor(id), body.Prompt)
+	var order sdk.Order
+	var err error
+	if body.Items != nil {
+		order, err = s.service.DraftItems(r.Context(), actor(id), *body.Items)
+	} else {
+		order, err = s.service.Draft(r.Context(), actor(id), body.Prompt)
+	}
 	if err != nil {
 		respondError(w, err)
 		return

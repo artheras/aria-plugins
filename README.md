@@ -1,6 +1,6 @@
 # Aria Plugins
 
-The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
+Portable plugins for **Codex, Claude Code and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
 **Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
 
@@ -10,9 +10,13 @@ The plugin catalogue for **Aria Code**: installable workflows, plugin metadata, 
 
 **PayPal (Sandbox).** The server talks to PayPal's REST API directly (there is no Go SDK): Orders v2 to create and capture an order, `verify-webhook-signature` to authenticate webhooks, and the Reporting API (Transaction Search, Balances) in a separate **read-only** client that cannot move money. In the browser the PayPal JavaScript buttons collect the buyer's approval, but the server alone creates, captures and checks every order against the approved invoice (amount, currency, invoice ID); a webhook reconciles independently and a replay is a no-op.
 
-**AI.** A model turns a natural-language request ("two tees and a mug", or the same in Chinese) into catalogue selections. In Sandbox mode that is Gemini on **Google Vertex AI**, called as the service's own Google identity (`ARIA_AI=vertex`); locally it can use your signed-in Aria Code account (`ARIA_AI=aria`). The model only *proposes* items. Prices come from a trusted catalogue, unknown SKUs and unknown fields are rejected, and approval, checkout, capture and refund are **not available to the agent at all**: they need a human browser session. The same tools are exposed over MCP, so an agent such as Aria Code can draft orders for a person to review.
+**AI.** Codex, Claude Code or Aria Code can read the catalogue and submit structured item selections using their own model. The server resolves prices and creates an unapproved draft, with no second AI account required (`ARIA_AI=host` for Sandbox without a server model). [Connect your client](docs/clients.md). Alternatively, a server-side model turns a natural-language request ("two tees and a mug", or the same in Chinese) into catalogue selections. In Sandbox mode that is Gemini on **Google Vertex AI**, called as the service's own Google identity (`ARIA_AI=vertex`); locally it can use your signed-in Aria Code account (`ARIA_AI=aria`). The model only *proposes* items. Prices come from a trusted catalogue, unknown SKUs and unknown fields are rejected, and approval, checkout, capture and refund are **not available to the agent at all**: they need a human browser session. The same tools are exposed over MCP, so an agent such as Aria Code can draft orders for a person to review.
 
 Try it: the hosted Sandbox service is described in [docs/sandbox-deployment.md](docs/sandbox-deployment.md); locally, `scripts/run-sandbox-local.sh` runs it against your own Sandbox credentials.
+
+## Connect Codex or Claude Code
+
+Use the [cross-client setup](docs/clients.md) for native Codex TOML, Claude Code MCP JSON, and host-model drafting. The same three MCP tools serve all clients; human approval and payments stay in the browser.
 
 ## Connect to Aria Code
 

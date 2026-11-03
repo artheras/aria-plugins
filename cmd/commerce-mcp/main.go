@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/artheras/aria-plugins/packages/sdk"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/idtoken"
 	"io"
@@ -77,7 +78,10 @@ func (b bridge) request(ctx context.Context, method, path string, body any) (str
 func toolsList() []any {
 	return []any{
 		map[string]any{"name": "commerce_catalog", "description": "List trusted catalogue SKUs and integer-cent prices. Read-only.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}},
-		map[string]any{"name": "commerce_draft_order", "description": "Create a draft from a request. The human must review and approve in the Commerce website. This tool cannot charge or approve.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"prompt": map[string]any{"type": "string", "minLength": 3, "maxLength": 2000}}, "required": []string{"prompt"}, "additionalProperties": false}},
+		map[string]any{"name": "commerce_draft_order", "description": "Create an unapproved order. Read commerce_catalog first, interpret the user's request with your own model, then submit items containing only sku and quantity. The server resolves prices; no extra server model call is needed. Alternatively submit prompt to use the configured server model. Provide exactly one of items or prompt. Never guess ambiguous selections. Returns the human review URL; cannot approve or charge.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{
+			"prompt": map[string]any{"type": "string", "minLength": 3, "maxLength": 2000},
+			"items":  map[string]any{"type": "array", "minItems": 1, "maxItems": 20, "items": map[string]any{"type": "object", "properties": map[string]any{"sku": map[string]any{"type": "string", "minLength": 1}, "quantity": map[string]any{"type": "integer", "minimum": 1, "maximum": 100}}, "required": []string{"sku", "quantity"}, "additionalProperties": false}},
+		}, "additionalProperties": false}},
 		map[string]any{"name": "commerce_get_order", "description": "Read a merchant-owned order and its audit trail. Does not change payment state.", "inputSchema": map[string]any{"type": "object", "properties": map[string]any{"order_id": map[string]any{"type": "string", "pattern": "^[a-f0-9]{32}$"}}, "required": []string{"order_id"}, "additionalProperties": false}},
 	}
 }
@@ -93,15 +97,16 @@ func (b bridge) call(params json.RawMessage) any {
 		return toolResult("invalid tool request", true)
 	}
 	var args struct {
-		Prompt  string `json:"prompt,omitempty"`
-		OrderID string `json:"order_id,omitempty"`
+		Prompt  string           `json:"prompt,omitempty"`
+		OrderID string           `json:"order_id,omitempty"`
+		Items   *[]sdk.Selection `json:"items,omitempty"`
 	}
 	if len(call.Arguments) == 0 {
 		call.Arguments = json.RawMessage("{}")
 	}
 	d := json.NewDecoder(bytes.NewReader(call.Arguments))
 	d.DisallowUnknownFields()
-	if d.Decode(&args) != nil {
+	if d.Decode(&args) != nil || d.Decode(&struct{}{}) != io.EOF {
 		return toolResult("invalid tool arguments", true)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 55*time.Second)
@@ -109,7 +114,7 @@ func (b bridge) call(params json.RawMessage) any {
 	method, path, body := "GET", "/api/catalog", any(nil)
 	switch call.Name {
 	case "commerce_catalog":
-		if args.Prompt != "" || args.OrderID != "" {
+		if args.Prompt != "" || args.OrderID != "" || args.Items != nil {
 			return toolResult("catalog accepts no arguments", true)
 		}
 		session, err := b.request(ctx, "GET", "/api/session", nil)
@@ -121,14 +126,33 @@ func (b bridge) call(params json.RawMessage) any {
 			return toolResult("Merchant authentication failed, or this service predates the 0.4.0 session contract.", true)
 		}
 	case "commerce_draft_order":
-		if len(args.Prompt) < 3 || len(args.Prompt) > 2000 || args.OrderID != "" {
-			return toolResult("provide a prompt of 3 to 2000 characters", true)
+		if args.OrderID != "" || (args.Items != nil && args.Prompt != "") || (args.Items == nil && (len(args.Prompt) < 3 || len(args.Prompt) > 2000)) {
+			return toolResult("provide exactly one of items or a prompt of 3 to 2000 characters", true)
 		}
-		method = "POST"
-		path = "/api/orders"
-		body = map[string]string{"prompt": args.Prompt}
+		method, path = "POST", "/api/orders"
+		if args.Items != nil {
+			if len(*args.Items) < 1 || len(*args.Items) > 20 {
+				return toolResult("select between 1 and 20 items", true)
+			}
+			for _, item := range *args.Items {
+				if item.SKU == "" || item.Quantity < 1 || item.Quantity > 100 {
+					return toolResult("invalid item selections", true)
+				}
+			}
+			config, err := b.request(ctx, "GET", "/api/config", nil)
+			var capabilities struct {
+				HostDraftItems bool `json:"host_draft_items"`
+			}
+			if err != nil || json.Unmarshal([]byte(config), &capabilities) != nil || !capabilities.HostDraftItems {
+				return toolResult("This Commerce service does not advertise host_draft_items support. Update the service before submitting host proposals; no model fallback or order was created.", true)
+			}
+			body = map[string]any{"items": *args.Items}
+		} else {
+			body = map[string]string{"prompt": args.Prompt}
+		}
+
 	case "commerce_get_order":
-		if len(args.OrderID) != 32 || strings.Trim(args.OrderID, "abcdef0123456789") != "" || args.Prompt != "" {
+		if len(args.OrderID) != 32 || strings.Trim(args.OrderID, "abcdef0123456789") != "" || args.Prompt != "" || args.Items != nil {
 			return toolResult("provide a valid order_id", true)
 		}
 		path = "/api/orders/" + args.OrderID
@@ -159,7 +183,7 @@ func (b bridge) result(req rpcRequest) (any, *rpcError) {
 		if p.Protocol != "2024-11-05" && p.Protocol != "2025-06-18" {
 			p.Protocol = "2025-06-18"
 		}
-		return map[string]any{"protocolVersion": p.Protocol, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "aria-commerce", "version": "0.2.0"}}, nil
+		return map[string]any{"protocolVersion": p.Protocol, "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]string{"name": "aria-commerce", "version": sdk.Version}}, nil
 	case "ping":
 		return map[string]any{}, nil
 	case "tools/list":

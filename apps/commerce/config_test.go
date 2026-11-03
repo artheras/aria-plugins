@@ -194,3 +194,27 @@ func TestMerchantLoginTokenMustDifferFromTheAgentToken(t *testing.T) {
 		t.Fatal("demo without a login secret must start with login disabled", err)
 	}
 }
+
+func TestHostAgentSandboxNeedsNoServerModelCredentials(t *testing.T) {
+	for _, key := range []string{"AI_GATEWAY_MODEL", "AI_GATEWAY_API_KEY", "VERCEL_OIDC_TOKEN", "K_SERVICE", "CLOUD_RUN_JOB", "VERCEL", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"} {
+		t.Setenv(key, "")
+	}
+	t.Setenv("ARIA_AI", "host")
+	t.Setenv("ARIA_MODE", "sandbox")
+	t.Setenv("ARIA_STORE", "file")
+	t.Setenv("ARIA_DATA_DIR", t.TempDir())
+	t.Setenv("PUBLIC_URL", "http://127.0.0.1:4180")
+	t.Setenv("PAYPAL_CLIENT_ID", "sandbox-id")
+	t.Setenv("PAYPAL_CLIENT_SECRET", "sandbox-secret")
+	t.Setenv("ARIA_MERCHANT_ID", "host-test")
+	t.Setenv("ARIA_MERCHANT_TOKEN", strings.Repeat("a", 32))
+	t.Setenv("ARIA_MERCHANT_LOGIN_TOKEN", strings.Repeat("h", 32))
+	t.Setenv("ARIA_SESSION_SECRET", strings.Repeat("s", 32))
+	c, err := FromEnvironment()
+	if err != nil {
+		t.Fatal("host path incorrectly requires a second AI account", err)
+	}
+	if _, ok := c.Drafter.(agents.Host); !ok || c.Payments.Name() != "paypal-sandbox" {
+		t.Fatal("host mode silently selected another model or payment provider")
+	}
+}

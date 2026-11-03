@@ -163,6 +163,7 @@ func fromEnvironment(worker bool) (Config, error) {
 	}
 	if c.Mode == "sandbox" {
 		ariaAI := os.Getenv("ARIA_AI") == "aria"
+		hostAI := os.Getenv("ARIA_AI") == "host"
 		// ARIA_AI=demo keeps the bounded local parser while payments are real
 		// Sandbox, to test the payment path without any AI credential. It is an
 		// explicit choice, never a fallback, and the drafter is named "(no AI)".
@@ -178,7 +179,7 @@ func fromEnvironment(worker bool) (Config, error) {
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
 			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN", "ARIA_SESSION_SECRET")
-			if !ariaAI && !localParser && !vertexAI {
+			if !ariaAI && !localParser && !vertexAI && !hostAI {
 				required = append(required, "AI_GATEWAY_MODEL")
 			}
 		}
@@ -187,7 +188,9 @@ func fromEnvironment(worker bool) (Config, error) {
 				return c, errors.New("sandbox configuration missing " + key)
 			}
 		}
-		if localParser {
+		if hostAI {
+			c.Drafter = agents.Host{}
+		} else if localParser {
 			c.Drafter = agents.Demo{}
 		} else if vertexAI {
 			model := os.Getenv("AI_GATEWAY_MODEL")

@@ -87,7 +87,7 @@ func doctor(directory string) error {
 }
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: aria-plugins install|configure|doctor|uninstall|version")
+		return errors.New("usage: aria-plugins install|configure|config|doctor|uninstall|version")
 	}
 	if args[0] == "version" {
 		emit(map[string]string{"version": sdk.Version, "contract_version": sdk.ContractVersion})
@@ -98,14 +98,34 @@ func run(args []string) error {
 	checksum := flags.String("sha256", "", "published lowercase SHA-256 digest")
 	directory := flags.String("dir", "", "installation destination, or installed version directory")
 	config := flags.String("config", "", "explicit Aria mcp_servers.json path")
+	client := flags.String("client", "aria", "native configuration client: codex, claude-code or aria")
+	binary := flags.String("binary", "", "absolute MCP binary path for config output")
 	replace := flags.Bool("replace", false, "replace the existing Commerce entry after backing up configuration")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
-	if flags.NArg() != 0 || *directory == "" {
+	if flags.NArg() != 0 || (*directory == "" && args[0] != "config") {
 		return errors.New("provide --dir and no positional arguments")
 	}
 	switch args[0] {
+	case "config":
+		if *config != "" {
+			return errors.New("config prints a native snippet; it does not replace an existing client file")
+		}
+		path := *binary
+		if path == "" {
+			i, err := distribution.ReadInstallation(*directory)
+			if err != nil {
+				return err
+			}
+			path = i.Binary
+		}
+		data, err := distribution.ClientConfig(*client, path)
+		if err != nil {
+			return err
+		}
+		_, err = os.Stdout.Write(data)
+		return err
 	case "install":
 		// Existing Aria state is touched only when the user supplies its exact
 		// --config path. A failed registration leaves no half-installed version.

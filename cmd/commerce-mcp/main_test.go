@@ -85,3 +85,42 @@ func TestCatalogDoctorRejectsInvalidMerchantSession(t *testing.T) {
 		}
 	}
 }
+
+func TestHostItemsForwardedWithoutPricesAndPaymentTools(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/config" {
+			w.Write([]byte(`{"host_draft_items":true}`))
+			return
+		}
+		requests++
+		if r.Method != "POST" || r.URL.Path != "/api/orders" || r.Header.Get("Authorization") != "Bearer agent" {
+			t.Error("wrong request")
+		}
+		var body map[string]json.RawMessage
+		if json.NewDecoder(r.Body).Decode(&body) != nil || len(body) != 1 || body["items"] == nil {
+			t.Error("host draft changed transport boundary")
+		}
+		w.Write([]byte(`{"id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","state":"draft"}`))
+	}))
+	defer server.Close()
+	b := bridge{base: server.URL, token: "agent", client: server.Client()}
+	raw, _ := json.Marshal(b.call(json.RawMessage(`{"name":"commerce_draft_order","arguments":{"items":[{"sku":"TSH-001","quantity":2}]}}`)))
+	if strings.Contains(string(raw), `"isError":true`) || !strings.Contains(string(raw), "Review in the merchant browser") {
+		t.Fatal(string(raw))
+	}
+	for _, arguments := range []string{
+		`{"items":[{"sku":"TSH-001","quantity":2,"amount":1}]}`,
+		`{"items":[],"prompt":"two tees"}`, `{"items":[]}`, `{"items":[{"sku":"TSH-001","quantity":1.2}]}`,
+		`{"items":[{"sku":"TSH-001","quantity":1}]} {}`, `{"items":[{"sku":"TSH-001","quantity":1}],"approved":true}`,
+	} {
+		params := json.RawMessage(`{"name":"commerce_draft_order","arguments":` + arguments + `}`)
+		raw, _ = json.Marshal(b.call(params))
+		if !strings.Contains(string(raw), `"isError":true`) {
+			t.Fatal("invalid selections accepted", arguments)
+		}
+	}
+	if requests != 1 {
+		t.Fatal("invalid input reached the service", requests)
+	}
+}
