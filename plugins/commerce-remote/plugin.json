@@ -1,0 +1,27 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "aria-commerce-remote",
+  "version": "0.1.0",
+  "description": "Connect your Aria Commerce account to read products, prepare unapproved orders and track status. Human approval and Sandbox payment stay in your browser.",
+  "author": {
+    "name": "Arthera",
+    "url": "https://github.com/artheras"
+  },
+  "repository": "https://github.com/artheras/aria-plugins",
+  "license": "Apache-2.0",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Aria Commerce",
+        "shortDescription": "Products, drafts and order tracking",
+        "developerName": "Arthera",
+        "category": "Productivity",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "privacyPolicyURL": "https://aria-commerce-sandbox-vrkp6bxpya-nw.a.run.app/privacy.html"
+      }
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # Use Commerce in Codex, Claude Code and Aria Code
 
+For browser-based OAuth connections without manual credentials, use the [remote plugin setup](../plugins/commerce-remote/README.md). It supports ChatGPT, Claude, Codex and Aria Code through the included local connector. The instructions below cover the separate manual-credential stdio bridge.
+
 All three clients use the same Go MCP bridge and Commerce service. The connected
 client reads the catalogue, interprets the user's request with its own model and
 submits only SKU/quantity selections. Commerce validates those selections, uses

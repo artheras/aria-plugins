@@ -1,6 +1,6 @@
 # Aria Plugins
 
-Portable plugins for **Codex, Claude Code and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
+Portable plugins for **ChatGPT, Codex, Claude and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
 **Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
 
@@ -17,6 +17,10 @@ Try it: the hosted Sandbox service is described in [docs/sandbox-deployment.md](
 ## Account access
 
 The optional [account pilot](docs/accounts.md) supports OIDC sign-in, assigned merchant roles and scoped, expiring client connections. The hosted Sandbox uses Google account sign-in with assigned merchant access. PayPal seller consent and multi-merchant onboarding are not implied by an Aria login.
+
+## Remote account connection
+
+[Connect the remote plugin](plugins/commerce-remote/README.md) with OAuth: Google sign-in, explicit permission review, rotating renewal credentials and per-app revocation. ChatGPT and Claude use the remote MCP URL; Aria Code uses the included Go connector. Four remote tools provide profile, catalogue, drafts and order status. Public directory publication requires platform review.
 
 ## Connect Codex or Claude Code
 

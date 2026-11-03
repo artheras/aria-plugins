@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aria-commerce": {
+      "type": "http",
+      "url": "https://aria-commerce-sandbox-vrkp6bxpya-nw.a.run.app/mcp"
+    }
+  }
+}

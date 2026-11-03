@@ -1,0 +1,9 @@
+{
+  "servers": [{
+    "name": "aria-commerce-remote",
+    "command": "/absolute/path/to/aria-commerce-connect",
+    "args": ["serve"],
+    "description": "Your OAuth-authorized Commerce products, drafts and status. Payment remains human-only.",
+    "enabled": true
+  }]
+}

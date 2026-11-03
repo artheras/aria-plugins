@@ -254,6 +254,12 @@ init();
 
 
 async function loadConnections() {
+  const apps=await api('/api/account/apps');$('mcp-url').value=apps.mcp_url;$('account-apps').replaceChildren();
+  for(const c of apps.apps) {
+    const row=document.createElement('li');appendText(row,'span',c.name+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());
+    const button=appendText(row,'button','Revoke','quiet');button.type='button';button.addEventListener('click',()=>run(async()=>{await api('/api/account/apps/revoke',{id:c.id});await loadConnections();feedback('App connection revoked. Access and renewal have stopped.');}));$('account-apps').append(row);
+  }
+
   const data=await api('/api/account/connections');$('account-connections').replaceChildren();
   for(const c of data.connections) {
     const row=document.createElement('li');appendText(row,'span',(c.label || 'Client')+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());

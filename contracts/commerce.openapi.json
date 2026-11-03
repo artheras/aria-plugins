@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Aria Commerce HTTP contract",
-    "version": "0.5.1",
+    "version": "0.6.0",
     "description": "Contract version 1. One merchant, USD integer cents. Monetary actions require browser authority. Demo responses are simulated."
   },
   "servers": [
