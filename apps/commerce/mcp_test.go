@@ -57,6 +57,10 @@ func TestRemoteMCPFullOAuthAndHumanBoundary(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	policy := res.Header.Get("Content-Security-Policy")
+	if !strings.Contains(policy, "form-action 'self' https://claude.ai") || strings.Contains(policy, "http://*") {
+		t.Fatal("callback not narrowly permitted by browser CSP", policy)
+	}
 	html, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 	if !strings.Contains(string(html), "Allow connection") {
