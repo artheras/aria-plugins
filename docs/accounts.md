@@ -57,8 +57,8 @@ Load this credential securely into the MCP bridge's existing
 `ARIA_COMMERCE_URL`. The variable name is retained for compatibility; in account
 mode its value must be the current user's scoped connection credential. Native
 [client configurations](clients.md) forward environment values without embedding
-them. The hosted demonstration launcher reads a shared **demo** credential and
-must not be reused for an account-mode deployment.
+them. A shared **demo** credential is valid only for demonstration-mode deployments;
+account-mode clients must use separate personal connection credentials.
 
 Client tools still cannot approve, check out, capture, refund, manage connections
 or acquire a browser session. Revoking a connection rejects its next request
@@ -79,10 +79,10 @@ Per-user draft quotas apply in addition to merchant and global quotas.
 
 Automated tests use a local signing identity provider and simulated payments.
 They do not establish a live Google login, actual PayPal seller consent, or a
-multi-merchant production deployment. The existing hosted Sandbox remains in
-explicit demonstration mode until an operator configures and verifies the OIDC
-application and assignments. Consumed login-state records need a retention policy
-in long-lived deployments.
+multi-merchant production deployment. The hosted Sandbox uses Google account
+sign-in with operator-managed assignments; payments remain PayPal Sandbox.
+Self-hosted deployments need their own verified OIDC application and assignments.
+Consumed login-state records need a retention policy in long-lived deployments.
 
 Multiple merchant deployments still require supported PayPal seller onboarding,
 server-verified consent and capability checks, isolated provider credentials,

@@ -1,57 +1,74 @@
-# Real PayPal Sandbox service on Cloud Run
+# PayPal Sandbox account service on Cloud Run
 
-How the Sandbox service was brought up, so it can be repeated. It is a **separate**
-Cloud Run service from the simulated demo; nothing about the demo changes.
+The hosted Commerce Sandbox uses Google account sign-in, operator-managed
+merchant assignments and scoped personal client connections. The payment provider
+is PayPal Sandbox; no production payments or public seller onboarding are enabled.
 
-| | Demo | Sandbox |
-|---|---|---|
-| Service | `aria-commerce` | `aria-commerce-sandbox` |
-| `ARIA_MODE` | `demo` (local parser, simulated payment) | `sandbox` (Gemini on Vertex AI, PayPal Sandbox) |
-| Orders | `aria_commerce_records` | `aria_commerce_sandbox_records` (same Firestore database) |
-| Merchant | `aria-commerce-demo` | `aria-commerce-sandbox` |
+| Setting | Account pilot |
+| --- | --- |
+| Service | `aria-commerce-sandbox` |
+| Payments | `ARIA_MODE=sandbox`, PayPal Sandbox credentials |
+| Drafting | `ARIA_AI=host`, selections proposed by the connected client model |
+| Sign-in | `ARIA_AUTH_MODE=oidc`, Google OIDC web application |
+| Data | Dedicated Firestore database/collection; one configured merchant |
+| Client access | Separate expiring `read`/`draft` credentials for assigned users |
 
-## Secrets (Secret Manager)
+## Identity and secrets
 
-Stored **without a trailing newline** (`printf %s`, not `echo`): Cloud Run passes a secret to the
-container byte for byte, so a newline makes the token the service holds differ from the one a
-client read with `$(...)`, and every merchant login fails as "invalid merchant login token".
+Register a confidential Google web client with the exact callback
+`PUBLIC_URL/api/auth/callback`. The service requests only `openid`. Keep the
+client secret in Secret Manager. Maintain the private subject/merchant/role
+bindings described in [account access](accounts.md); an email is not a subject.
 
-- `aria-commerce-sandbox-session-secret`, `aria-commerce-sandbox-merchant-token`, `aria-commerce-sandbox-merchant-login-token`: random, 64 hex characters, all different. The merchant token is the agent (MCP bridge) credential; the login token is the human merchant's browser login and is never given to the agent.
-- `aria-commerce-paypal-sandbox-client-id`, `aria-commerce-paypal-sandbox-client-secret`: the Sandbox REST app (Transaction search enabled)
-- `aria-commerce-sandbox-paypal-webhook-id`: the webhook registered below
+The runtime identity needs Firestore access and read access to these service
+secrets only:
 
-The runtime service account (`aria-commerce-runtime`) gets `secretmanager.secretAccessor` on each, and
-`roles/aiplatform.user` on the project so `ARIA_AI=vertex` can call Vertex AI as itself.
+- Session signing/encryption secret.
+- OIDC client secret and the private bindings file mounted read-only.
+- PayPal Sandbox client ID, client secret and webhook ID.
 
-## Build and deploy
+Do not pass personal client connection credentials to the service. The service
+stores only their hashes. Clients load their own credentials from a secure local
+store or user-authorized secret store; native configuration files reference a
+launcher/environment, not literal tokens. Host-model drafting needs no Vertex AI
+or AI Gateway credential.
+
+## Build and configure
+
+Build the exact reviewed commit with `cloudbuild.yaml`. The Docker build uses
+Go 1.26.10 or later. For an existing Sandbox service with its provider and storage
+configuration already set, stage account configuration without switching traffic:
 
 ```sh
-gcloud builds submit --config=cloudbuild.yaml \
-  --substitutions=_IMAGE=REGION-docker.pkg.dev/PROJECT/REPO/aria-commerce-sandbox,COMMIT_SHA=$(git rev-parse --short=12 HEAD) .
-
-gcloud run deploy aria-commerce-sandbox --region=REGION --image=IMAGE:TAG \
-  --service-account=aria-commerce-runtime@PROJECT.iam.gserviceaccount.com \
-  --port=4180 --memory=512Mi --cpu=1 --max-instances=2 --concurrency=20 --allow-unauthenticated \
-  --set-env-vars="ARIA_MODE=sandbox,ARIA_AI=vertex,PAYPAL_BUTTONS=1,ARIA_STORE=firestore,GOOGLE_CLOUD_PROJECT=PROJECT,ARIA_FIRESTORE_DATABASE=DB,ARIA_FIRESTORE_COLLECTION=aria_commerce_sandbox_records,PUBLIC_URL=https://SERVICE-HASH-REGION.a.run.app,ARIA_BIND_ALL=1,ARIA_MERCHANT_ID=aria-commerce-sandbox" \
-  --set-secrets="ARIA_SESSION_SECRET=aria-commerce-sandbox-session-secret:latest,ARIA_MERCHANT_TOKEN=aria-commerce-sandbox-merchant-token:latest,ARIA_MERCHANT_LOGIN_TOKEN=aria-commerce-sandbox-merchant-login-token:latest,PAYPAL_CLIENT_ID=aria-commerce-paypal-sandbox-client-id:latest,PAYPAL_CLIENT_SECRET=aria-commerce-paypal-sandbox-client-secret:latest"
+gcloud run services update aria-commerce-sandbox \
+  --project=PROJECT --region=REGION --image=IMAGE_DIGEST \
+  --update-env-vars="ARIA_MODE=sandbox,ARIA_AI=host,ARIA_AUTH_MODE=oidc,ARIA_OIDC_ISSUER=https://accounts.google.com,ARIA_OIDC_CLIENT_ID=WEB_CLIENT_ID,ARIA_ACCOUNT_BINDINGS_FILE=/run/secrets/account-bindings.json" \
+  --remove-secrets="ARIA_MERCHANT_TOKEN,ARIA_MERCHANT_LOGIN_TOKEN" \
+  --update-secrets="ARIA_OIDC_CLIENT_SECRET=OIDC_SECRET:latest,/run/secrets/account-bindings.json=BINDINGS_SECRET:latest" \
+  --no-traffic --tag=account-candidate
 ```
 
-`PUBLIC_URL` must be the exact origin the browser uses (cookies, Origin checks, PayPal return URLs).
-Public access only exposes the page; every order action needs the merchant session.
+Preserve `ARIA_SESSION_SECRET`, PayPal settings, quotas, persistent storage and a
+stable `ARIA_MERCHANT_ID`. Remove any legacy ownership migration setting. Account
+mode rejects shared demonstration credentials. `PUBLIC_URL` must be the canonical
+browser origin, including when checking a tagged candidate.
 
-## Webhook
+Verify candidate configuration, anonymous rejection, personal read/draft access,
+and rejection of legacy credentials and agent approval. A tagged candidate uses
+the canonical callback; complete the real Google browser sign-in after routing to
+the verified account revision. Prepare matching personal client configuration and
+a rollback plan before switching. Remove legacy revision tags so old endpoints
+cannot bypass account permissions. Retain credentials and order data when changing
+routing.
+
+## PayPal webhook and verification
 
 Register `PUBLIC_URL/api/paypal/webhook` for `PAYMENT.CAPTURE.COMPLETED` and
-`PAYMENT.CAPTURE.REFUNDED` (Developer Dashboard, or `POST /v1/notifications/webhooks` with the app's
-credentials), store the returned ID as `aria-commerce-sandbox-paypal-webhook-id`, and attach it with
-`gcloud run services update ... --update-secrets=PAYPAL_WEBHOOK_ID=aria-commerce-sandbox-paypal-webhook-id:latest`.
-A webhook with a bad signature is answered `400`.
+`PAYMENT.CAPTURE.REFUNDED`, store its ID securely, and configure
+`PAYPAL_WEBHOOK_ID`. Verify webhook delivery and reconciliation independently.
+A draft or successful sign-in is not proof of a Sandbox capture.
 
-## Findings from the first deployment
-
-- Gemini counts its reasoning against `max_tokens`; at 700 the JSON was cut off (`finish_reason=length`) on
-  Cloud Run, though not locally. Vertex now uses 4096.
-- Gemini may return `summary` as an object; it is commentary and is coerced, while `items` stay strictly validated.
-- `draft_failed` now logs the drafter's cause, which is how both were found.
-
-Not covered: the Cloud Run Job for payment recovery, alerting, load behaviour, live webhook delivery.
+Google sign-in does not grant PayPal merchant permissions. Multiple merchants
+require supported seller onboarding, verified consent, isolated provider
+credentials/catalogues and tenant-aware webhook/recovery routing. Personal stdio
+credentials are not remote MCP OAuth authorization.

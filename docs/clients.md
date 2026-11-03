@@ -15,7 +15,8 @@ make build
 ```
 
 Run `bin/aria-commerce` in a separate terminal. Default mode simulates payments.
-Keep `ARIA_MERCHANT_TOKEN` identical in the service and client environment. Set a
+For a local demonstration, keep `ARIA_MERCHANT_TOKEN` identical in the service
+and client environment. Set a
 different `ARIA_MERCHANT_LOGIN_TOKEN` on the service process only. The agent token
 cannot log in as the human merchant. Keep both out of source control and logs.
 
@@ -114,10 +115,12 @@ OAuth onboarding.
 
 ## Account access
 
-The hosted Sandbox is a single-merchant demonstration. Its browser credential and
-agent credential belong to that test merchant; neither represents an end user's
-PayPal sign-in or permission to read that user's account. Do not share this
-connection with unrelated merchants or connect production accounts.
+The hosted Sandbox is a single-merchant account pilot. Sign in with Google,
+using an account explicitly assigned to the merchant, and create a personal
+read/draft connection. Use its credential in the bridge environment; a shared
+demo credential is rejected. Google sign-in does not authorize access to a
+user's PayPal account. Do not share a connection with unrelated merchants or
+connect production accounts.
 
 A production deployment needs Aria user sign-in followed by explicit, supported
 PayPal merchant onboarding and consent for each requested capability. Sign-in
