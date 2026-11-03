@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/artheras/aria-plugins/packages/sdk"
 )
 
 func testBundle(t *testing.T, extra string) (string, string, string) {
@@ -20,7 +22,7 @@ func testBundle(t *testing.T, extra string) (string, string, string) {
 	}
 	var buffer bytes.Buffer
 	z := zip.NewWriter(&buffer)
-	manifest, _ := json.Marshal(Manifest{Name: "commerce", Version: "0.4.0", ContractVersion: "1", GOOS: runtime.GOOS, GOARCH: runtime.GOARCH})
+	manifest, _ := json.Marshal(Manifest{Name: "commerce", Version: sdk.Version, ContractVersion: "1", GOOS: runtime.GOOS, GOARCH: runtime.GOARCH})
 	files := map[string][]byte{"bundle.json": manifest, "bin/aria-commerce-mcp" + Extension(runtime.GOOS): []byte("binary fixture")}
 	for _, directory := range []string{".claude-plugin", "plugins", "skills"} {
 		err := filepath.WalkDir(filepath.Join("..", "..", directory), func(path string, entry os.DirEntry, err error) error {
@@ -163,7 +165,7 @@ func TestUpgradeKeepsEveryBackupAndAFailedRegistrationCanBeRetried(t *testing.T)
 	if _, err = InstallAndRegister(path, sum, destination, broken, true); err == nil {
 		t.Fatal("invalid configuration accepted")
 	}
-	if _, err = os.Stat(filepath.Join(destination, "0.4.0")); !os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.Join(destination, sdk.Version)); !os.IsNotExist(err) {
 		t.Fatal("failed registration left the version installed", err)
 	}
 	os.WriteFile(broken, original, 0600)

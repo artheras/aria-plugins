@@ -1,17 +1,22 @@
-# Aria Plugins 0.5.0
+# Aria Plugins 0.5.1
 
-The catalogue includes Commerce, Finance and Computer Use portable workflows.
-Computer Use connects to the local `aria-computer-use` MCP executable from
-Aria Code 0.166.0 or later, installed with the browser extra and Chromium.
-The Go release bundles contain the workflow and host templates, not Python or
-Chromium. Its browser session is isolated and restricted to user-configured
-origins; every navigation and input action requires native macOS approval.
-No desktop input or unattended publishing is exposed by this plugin.
+Commerce connects Codex, Claude Code and Aria Code to one shared MCP service.
+The client model proposes catalogue SKUs and quantities; Commerce validates them,
+resolves current prices and returns an unapproved order with a browser review URL.
+`ARIA_AI=host` supports PayPal Sandbox without a second server-model account.
 
-Aria Code, Codex and Claude Code host templates are included. Native and Python
-Aria Code paths forward browser observations and images to vision-capable models.
-The installer validates the catalogue, generated skill mirror and integrity locks.
+The installation helper prints native client configurations with
+`aria-plugins config --client codex|claude-code|aria --binary ABSOLUTE_PATH`.
+Configurations reference credentials from the launching environment. Agent and
+human merchant credentials remain separate. Approval, checkout, capture and refund
+are browser-only. Older services reject host proposals until they are upgraded.
 
-Commerce and Finance retain their separate permissions and service requirements.
-No provider credentials are included, and no external transactions or publishing
-are enabled by installing the catalogue.
+The release includes six platform bundles with SHA256SUMS, portable Commerce,
+Finance and Computer Use workflows, and integrity locks. External services and
+client model access must be configured separately. The current Commerce service
+supports one merchant; it is not multi-tenant OAuth onboarding.
+
+Local verification covers all Go race tests and vet, native Codex tool discovery
+and catalogue/draft/status calls, Claude Code MCP connectivity and manifest
+validation. Native-client checks used simulated payments; they do not establish
+a PayPal Sandbox transaction, model inference or a clinical/financial outcome.

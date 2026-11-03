@@ -111,3 +111,20 @@ not verify a client's model credentials or a real PayPal transaction. A remote
 service used by several merchants still needs per-user identity and scoped
 credentials; the current service is a single-merchant prototype, not shared SaaS
 OAuth onboarding.
+
+## Account access
+
+The hosted Sandbox is a single-merchant demonstration. Its browser credential and
+agent credential belong to that test merchant; neither represents an end user's
+PayPal sign-in or permission to read that user's account. Do not share this
+connection with unrelated merchants or connect production accounts.
+
+A production deployment needs Aria user sign-in followed by explicit, supported
+PayPal merchant onboarding and consent for each requested capability. Sign-in
+identity alone does not authorize access to transactions or balances. Resolve
+user and merchant ownership from verified server-side identity, never model input;
+partition catalogue, orders, audit records and quotas by tenant. Store provider
+credentials encrypted per merchant with refresh and revocation support. Remote
+MCP clients need user-scoped authorization, audience validation and least-privilege
+scopes. Payment approval must remain bound to the exact invoice and a human
+session. These multi-user capabilities are not implemented by the demo token.
