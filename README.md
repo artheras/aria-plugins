@@ -2,7 +2,7 @@
 
 Portable plugins for **ChatGPT, Codex, Claude and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
-**Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. The **Aria Commerce · Plugin Demo** webpage is an interactive example of the plugin's tools, with a browser workflow and a **Use in Aria Code** setup entry.
+**Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. Use the plugin inside your AI client; the service keeps a separate account and exact-order review console.
 
 **Finance** connects to the independent [Financial Service](https://github.com/artheras/financial-service) for statements, SEC evidence, risk metrics, historical data and simulated backtests. Its financial algorithms live in that service, not this catalogue. See [Finance setup](plugins/finance/README.md).
 
@@ -76,28 +76,18 @@ apps/commerce/              # Browser example
 
 Edit skills inside their plugin, then run `make catalog-sync`. Commit the generated mirror and lock together. `make catalog-check` and CI reject changed hashes, stale mirrors, invalid paths, and inconsistent plugin versions. See [CONTRIBUTING.md](CONTRIBUTING.md) to add another plugin. Only implemented plugins are listed.
 
-## Try locally
+## Develop the service
 
-Go 1.26 or newer. Google's official Go SDK provides Firestore persistence and optional Cloud Run identity tokens.
-
-```sh
-git clone https://github.com/artheras/aria-plugins.git
-cd aria-plugins
-make build
-./bin/aria-commerce
-```
-
-Open http://127.0.0.1:4180 and create an order for **2 tees and 1 mug**. Review the $60.00 invoice, approve it, create checkout, simulate payment, and download the labelled receipt. Refreshing preserves the server's order record.
-
-Default demo mode uses a small deterministic parser and simulated payment. It makes no AI or PayPal calls and moves no money. Sandbox mode never silently falls back to demo.
-
-![Commerce plugin demo: browser order review and Aria Code setup](docs/commerce-preview.jpg)
+Users connect from their AI client's plugin settings; they do not need a local
+storefront or a local browser demo. Follow the [remote plugin setup](plugins/commerce-remote/README.md).
+Developers can build and test the Go backend with `make build` and `make test`.
+The review console is for account permissions and exact-order approvals only.
 
 ## Repository
 
 | Path | Role |
 | --- | --- |
-| apps/commerce | HTTP workflow and embedded HTML/CSS/JavaScript interface |
+| apps/commerce | HTTP workflow, OAuth and account/order review console |
 | cmd/server | Go service entrypoint |
 | cmd/commerce-worker | Bounded recovery job for persisted payment intents |
 | packages/commerce | Transport-independent order workflow and recovery |

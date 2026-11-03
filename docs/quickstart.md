@@ -1,51 +1,12 @@
-# Commerce quickstart
+# Connect Aria Commerce
 
-Commerce is the first plugin in the Aria Code catalogue. Its business service and reusable modules are written in Go; the browser demo uses plain HTML, CSS, and JavaScript.
+Install the [remote plugin](../plugins/commerce-remote/README.md) from your AI
+client, sign in, review permissions, then ask the model to read the catalogue and
+prepare an order. Users do not need to open a local demo storefront.
 
-## Try the browser demo
+The plugin returns an exact-order review link. Open it only to inspect the
+invoice and approve the requested action. Manage app connections in the account
+console. PayPal funds remain Sandbox test funds.
 
-Install Go 1.26 or newer, then run from the repository root:
-
-```sh
-make build
-./bin/aria-commerce
-```
-
-Open `http://127.0.0.1:4180`. Draft an order for **2 tees and 1 mug**, review the **$60.00** invoice, approve it, create checkout, simulate payment, and download the receipt. The page is labelled **Aria Commerce · Plugin Demo**. No credentials are needed for this local browser workflow.
-
-**Demo mode makes no AI or PayPal calls and moves no money.** The page and receipt identify simulated results. Records persist in the ignored `data/` directory and survive refreshes and service restarts.
-
-## Use the same plugin in Aria Code
-
-Follow [Connect to Aria Code](aria-code.md) to install `commerce:commerce`, build the Go MCP bridge, and register its tools. Installing the skill alone does not start the service or configure MCP.
-
-Aria can read products, draft orders, and inspect status. You approve the exact invoice and complete checkout in the browser.
-
-## Configure AI Gateway and PayPal Sandbox
-
-Copy `.env.example` to `.env` and configure locally:
-
-| Variable | Purpose |
-| --- | --- |
-| ARIA_MODE | Set to `sandbox` |
-| PUBLIC_URL | Exact browser origin; use HTTPS for a hosted deployment |
-| PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET | Sandbox REST application credentials |
-| AI_GATEWAY_API_KEY | Vercel AI Gateway API key |
-| AI_GATEWAY_MODEL | Available model ID supporting JSON object output |
-| ARIA_SESSION_SECRET | Independent random value, at least 32 characters |
-| ARIA_MERCHANT_TOKEN | Agent (MCP bridge) credential: another independent random value, at least 32 characters |
-| ARIA_MERCHANT_LOGIN_TOKEN | Human merchant browser login: a third independent value, at least 32 characters, never given to the agent |
-| PAYPAL_WEBHOOK_ID | Optional for browser capture; required for webhook processing |
-
-The service reads exported variables and does not automatically load `.env`:
-
-```sh
-set -a
-. ./.env
-set +a
-./bin/aria-commerce
-```
-
-Connect the browser's merchant session using the configured token. Approve an invoice, open PayPal Sandbox with a test buyer account, return to Commerce, and capture and verify the payment.
-
-For Vercel, persistent Redis REST storage, stable session secrets, and the exact public origin are required. See the [full setup guide](setup.md) for credentials, webhooks, MCP, Docker, and deployment configuration. Live providers and cloud deployment require configuration and separate validation.
+For backend development, run `make build` and `make test`. Configure a deployed
+HTTPS origin before connecting hosted AI clients. See [server setup](setup.md).

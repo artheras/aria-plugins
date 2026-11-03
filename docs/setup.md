@@ -1,21 +1,11 @@
 # Setup
 
-## 1. Local demo
+## 1. Build the backend
 
-Install Go 1.26+, then run `make build` and `./bin/aria-commerce`. Open `http://127.0.0.1:4180` (use the same origin, not localhost instead). No credentials are needed.
-
-The server stores orders and its generated session key in the ignored `data/` directory, with restrictive file permissions. Keep that directory to retain orders and sessions. Run only one process against a local directory.
-
-The application reads **exported environment variables**. It does not load .env automatically. Copy `.env.example` to `.env`, edit it locally, then load it in your shell:
-
-```sh
-set -a
-. ./.env
-set +a
-./bin/aria-commerce
-```
-
-Keep secrets in local configuration or your hosting provider's environment settings. Do not commit .env or include credentials in screenshots.
+Use Go 1.26.10+ and run `make build` and `make test`. End users connect from their
+AI client using the [remote plugin](../plugins/commerce-remote/README.md);
+a local storefront is not part of installation. The embedded console is for
+account access and human order review.
 
 ## 2. PayPal Sandbox
 
