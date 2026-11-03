@@ -22,6 +22,11 @@ func (s *Server) catalogue() products.Repository {
 	return s.service.ProductSource.(products.Repository)
 }
 func (s *Server) getCatalog(w http.ResponseWriter, r *http.Request) {
+	if s.config.Account != nil {
+		if _, ok := s.authorize(w, r, false); !ok {
+			return
+		}
+	}
 	items, err := s.catalogue().Products(r.Context())
 	if err != nil {
 		fail(w, 503, "Catalogue unavailable.")
@@ -30,6 +35,11 @@ func (s *Server) getCatalog(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, items)
 }
 func (s *Server) catalogSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.config.Account != nil {
+		if _, ok := s.authorize(w, r, false); !ok {
+			return
+		}
+	}
 	items, err := s.catalogue().Snapshot(r.Context())
 	if err != nil {
 		fail(w, 503, "Catalogue unavailable.")
@@ -42,7 +52,7 @@ func (s *Server) updateCatalog(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !s.config.loginEnabled() || id.owner != s.merchantOwner() {
+	if (!s.config.loginEnabled() && s.config.Account == nil) || id.owner != s.merchantOwner() {
 		fail(w, 403, "Catalogue updates require the connected merchant session.")
 		return
 	}

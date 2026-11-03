@@ -1,5 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
+let account = null;
 let config, csrf = '', order = null, busy = false, catalogue = [], catalogueDigest = '', historyCursor = '';
 const money = cents => new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format(cents/100);
 const labels = {draft:'Draft · needs your review',approved:'Approved by you',awaiting_payment:'Awaiting payment',paid:'Payment reconciled',cancelled:'Cancelled',expired:'Expired',refunded:'Full refund reconciled',refund_pending:'Refund pending',payment_review:'Provider review required'};
@@ -27,7 +28,7 @@ function loadPayPal() {
 }
 async function renderPayPalButtons() {
   const box=$('paypal-buttons');
-  const show=!!config.paypal_client_id && !!order && order.state==='awaiting_payment' && !!order.payment?.order_id && !order.payment.checkout_url && !order.operation;
+  const show=(!account || account.role==='operator') && !!config.paypal_client_id && !!order && order.state==='awaiting_payment' && !!order.payment?.order_id && !order.payment.checkout_url && !order.operation;
   box.hidden=!show;
   if(!show) { buttonsFor=''; box.replaceChildren(); return; }
   $('capture').hidden=true;
@@ -88,6 +89,10 @@ function render() {
   $('sync-payment').hidden=!order.payment?.capture_id || config.mode==='demo';
   if(order.operation?.needs_review) $('action-note').textContent+=' Reason: '+(order.operation.last_code || 'Review required')+'.';
   if(order.state==='cancelled' || order.state==='expired') $('action-note').textContent='This unstarted order is closed. Create a new request to continue.';
+  if(account && account.role!=='operator') {
+    ['approve','checkout','capture','paypal-link','edit-order','cancel-order','resume-order','refund-order','sync-payment'].forEach(id=>$(id).hidden=true);
+    $('action-note').textContent='Your account can view this order'+(account.scopes.includes('draft')?' and create drafts.':'.')+' A merchant operator must review and approve changes.';
+  }
   const stages=['draft','approved','awaiting_payment','paid'], current=stages.indexOf(order.state);
   document.querySelectorAll('.steps li').forEach((li,index)=>{li.classList.toggle('current',index===current);li.classList.toggle('done',index<current);});
   $('audit').replaceChildren();
@@ -184,7 +189,7 @@ $('approve').addEventListener('click',()=>run(async()=>{order=await api('/api/or
 $('checkout').addEventListener('click',()=>run(async()=>{order=await api('/api/orders/'+order.id+'/checkout',{});render();await loadHistory();feedback(config.mode==='demo'?'Simulated checkout created.':'PayPal Sandbox checkout created.');}));
 $('capture').addEventListener('click',()=>run(async()=>{order=await api('/api/orders/'+order.id+'/capture',{});render();await loadHistory();feedback(config.mode==='demo'?'Demo payment reconciled. No real payment was made.':'PayPal capture reconciled successfully.');}));
 $('refresh').addEventListener('click',()=>run(async()=>{await loadOrder(order.id);await loadHistory();feedback('Order refreshed from server storage.');}));
-$('connect').addEventListener('click',()=>$('login-dialog').showModal());
+$('connect').addEventListener('click',()=>{if(account) $('account-panel').scrollIntoView({behavior:'smooth'});else $('login-dialog').showModal();});
 $('close-login').addEventListener('click',()=>$('login-dialog').close());
 $('login-form').addEventListener('submit',async event=>{
   event.preventDefault(); $('login-error').textContent='';
@@ -220,12 +225,25 @@ async function init() {
     if(config.server_text_drafting===false) {
       $('draft-form').hidden=true;
       const note=document.createElement('p');note.className='fine';
+      note.id='host-draft-instruction';
       note.textContent='Create your order in connected Codex, Claude Code or Aria Code, then open its review link here.';
       $('draft-form').after(note);
     }
-    $('connect').hidden=!config.merchant_login_available;
-    await loadCatalogue();
+    $('connect').hidden=!config.merchant_login_available && config.auth_mode!=='oidc';
+    if(config.auth_mode==='oidc') {
+      $('connect').textContent='Your account';$('login-form').hidden=true;$('account-signin').hidden=false;
+      const id=new URL(location.href).searchParams.get('order');
+      if(id && /^[a-f0-9]{32}$/.test(id)) $('account-signin-link').href='/api/auth/login?order='+id;
+    }
     const session=await api('/api/session');csrf=session.csrf || '';
+    if(config.auth_mode!=='oidc' || session.authenticated) await loadCatalogue();
+    account=session.account || null;
+    if(account) {
+      $('account-panel').hidden=false;$('account-summary').textContent='Merchant: '+account.merchant_id+' · Role: '+account.role;
+      $('draft-scope-option').disabled=!account.scopes.includes('draft');
+      if(!account.scopes.includes('draft')) {$('draft-form').hidden=true;if($('host-draft-instruction')) $('host-draft-instruction').textContent='Your account has read-only access. Select an existing order to view its details.';}
+      await loadConnections();
+    }
     if(!session.authenticated) {$('login-dialog').showModal();return;}
     $('catalogue-admin').hidden=!session.merchant;await loadHistory();
     const params=new URL(location.href).searchParams,id=params.get('order');
@@ -234,3 +252,22 @@ async function init() {
 }
 init();
 
+
+async function loadConnections() {
+  const data=await api('/api/account/connections');$('account-connections').replaceChildren();
+  for(const c of data.connections) {
+    const row=document.createElement('li');appendText(row,'span',(c.label || 'Client')+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());
+    const button=appendText(row,'button','Revoke','quiet');button.type='button';button.addEventListener('click',()=>run(async()=>{await api('/api/account/connections/revoke',{id:c.id});$('connection-token').value='';$('connection-result').hidden=true;await loadConnections();feedback('Connection revoked. Its next request will be rejected.');}));$('account-connections').append(row);
+  }
+}
+$('connection-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
+  $('connection-token').value='';$('connection-result').hidden=true;
+  const scopes=$('connection-scope').value==='draft'?['read','draft']:['read'];
+  const data=await api('/api/account/connections',{label:$('connection-label').value,scopes,ttl_seconds:Number($('connection-expiry').value)});
+  $('connection-token').value=data.token;$('connection-result').hidden=false;await loadConnections();
+});});
+$('clear-connection-token').addEventListener('click',()=>{$('connection-token').value='';$('connection-result').hidden=true;});
+$('account-logout').addEventListener('click',()=>run(async()=>{await api('/api/logout',{});$('connection-token').value='';location.replace('/');}));
+
+$('copy-connection-token').addEventListener('click',()=>run(async()=>{if(!$('connection-token').value) throw new Error('No credential to copy.');await navigator.clipboard.writeText($('connection-token').value);feedback('Credential copied. Save it in your local credential store, outside the chat.');}));
+window.addEventListener('pagehide',()=>{$('connection-token').value='';$('connection-result').hidden=true;});

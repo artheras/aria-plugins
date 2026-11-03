@@ -14,6 +14,10 @@ Portable plugins for **Codex, Claude Code and Aria Code**: installable workflows
 
 Try it: the hosted Sandbox service is described in [docs/sandbox-deployment.md](docs/sandbox-deployment.md); locally, `scripts/run-sandbox-local.sh` runs it against your own Sandbox credentials.
 
+## Account access
+
+The optional [account pilot](docs/accounts.md) supports OIDC sign-in, assigned merchant roles and scoped, expiring client connections. The hosted Sandbox demonstration remains separate; PayPal seller consent and multi-merchant onboarding are not implied by an Aria login.
+
 ## Connect Codex or Claude Code
 
 Use the [cross-client setup](docs/clients.md) for native Codex TOML, Claude Code MCP JSON, and host-model drafting. The same three MCP tools serve all clients; human approval and payments stay in the browser.

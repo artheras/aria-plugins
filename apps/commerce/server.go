@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/artheras/aria-plugins/packages/accounts"
 	"github.com/artheras/aria-plugins/packages/agents"
 	"github.com/artheras/aria-plugins/packages/sdk"
 )
@@ -55,6 +56,12 @@ func New(c Config) *Server {
 	s.mux.HandleFunc("GET /api/ready", s.ready)
 	s.mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
 		cfg := map[string]any{"mode": c.Mode, "version": sdk.Version, "contract_version": sdk.ContractVersion, "drafter": c.Drafter.Name(), "payment_provider": c.Payments.Name(), "merchant_login_available": c.loginEnabled(), "host_draft_items": true, "server_text_drafting": c.Drafter.Name() != (agents.Host{}).Name(), "plugins": []string{"commerce"}, "modules": []string{"agents", "approvals", "payments", "products", "storage"}}
+		if c.Account != nil {
+			cfg["auth_mode"] = "oidc"
+			cfg["account_login_url"] = "/api/auth/login"
+		} else {
+			cfg["auth_mode"] = "single_merchant_demo"
+		}
 		if c.PayPalButtons {
 			cfg["paypal_client_id"] = c.PayPalClientID
 		}
@@ -62,6 +69,12 @@ func New(c Config) *Server {
 	})
 	s.mux.HandleFunc("GET /api/session", s.session)
 	s.mux.HandleFunc("POST /api/login", s.login)
+	s.mux.HandleFunc("GET /api/auth/login", s.authLogin)
+	s.mux.HandleFunc("GET /api/auth/callback", s.authCallback)
+	s.mux.HandleFunc("POST /api/logout", s.logout)
+	s.mux.HandleFunc("GET /api/account/connections", s.grants)
+	s.mux.HandleFunc("POST /api/account/connections", s.grants)
+	s.mux.HandleFunc("POST /api/account/connections/revoke", s.revokeGrant)
 	s.mux.HandleFunc("GET /api/catalog", s.getCatalog)
 	s.mux.HandleFunc("GET /api/catalog/snapshot", s.catalogSnapshot)
 	s.mux.HandleFunc("POST /api/catalog/update", s.updateCatalog)
@@ -163,6 +176,8 @@ func (s *Server) sign(value string) string {
 type identity struct {
 	owner, csrf string
 	bearer      bool
+	principal   accounts.Principal
+	credential  string
 }
 
 func (s *Server) merchantOwner() string {
@@ -177,6 +192,9 @@ func (s *Server) setSession(w http.ResponseWriter, owner string) identity {
 	return identity{owner: owner, csrf: s.sign("csrf:" + value)}
 }
 func (s *Server) who(r *http.Request) (identity, error) {
+	if s.config.Account != nil {
+		return s.accountIdentity(r)
+	}
 	auth := r.Header.Get("Authorization")
 	if auth != "" {
 		expected := "Bearer " + s.config.MerchantToken
@@ -216,8 +234,22 @@ func (s *Server) who(r *http.Request) (identity, error) {
 func (s *Server) authorize(w http.ResponseWriter, r *http.Request, human bool) (identity, bool) {
 	id, err := s.who(r)
 	if err != nil {
-		fail(w, 401, err.Error())
+		if errors.Is(err, accounts.ErrUnavailable) {
+			fail(w, 503, "Account storage unavailable.")
+		} else {
+			fail(w, 401, "Authentication required.")
+		}
 		return id, false
+	}
+	if id.principal.UserID != "" {
+		required := "read"
+		if r.Method == "POST" && r.URL.Path == "/api/orders" {
+			required = "draft"
+		}
+		if !id.principal.Allows(required) || human && id.principal.Role != "operator" && !strings.HasPrefix(r.URL.Path, "/api/account/") && r.URL.Path != "/api/logout" {
+			fail(w, 403, "This account does not have permission for this action.")
+			return id, false
+		}
 	}
 	if human && id.bearer {
 		fail(w, 403, "this action requires human confirmation in the browser")
@@ -227,11 +259,14 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request, human bool) (
 		fail(w, 403, "invalid session confirmation; reload the page")
 		return id, false
 	}
+	if id.principal.UserID != "" {
+		s.logger.InfoContext(r.Context(), "account_authorized", "request_id", w.Header().Get("X-Request-ID"), "user_id", id.principal.UserID, "merchant_id", id.principal.MerchantID, "role", id.principal.Role, "agent", id.bearer, "connection_id", id.credential)
+	}
 	return id, true
 }
 func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	id, err := s.who(r)
-	if err != nil && s.config.Mode == "demo" {
+	if err != nil && s.config.Mode == "demo" && s.config.Account == nil {
 		id = s.setSession(w, randomID())
 		err = nil
 	}
@@ -239,9 +274,18 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		write(w, 200, map[string]any{"authenticated": false})
 		return
 	}
-	write(w, 200, map[string]any{"authenticated": true, "csrf": id.csrf, "merchant": id.owner == s.merchantOwner()})
+	result := map[string]any{"authenticated": true, "csrf": id.csrf, "merchant": id.owner == s.merchantOwner()}
+	if id.principal.UserID != "" {
+		result["account"] = id.principal
+		result["merchant"] = id.principal.Role == "operator"
+	}
+	write(w, 200, result)
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	if s.config.Account != nil {
+		fail(w, 403, "Use account sign-in; demo credentials are disabled.")
+		return
+	}
 	peer, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		peer = r.RemoteAddr
@@ -300,6 +344,9 @@ func (s *Server) draft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.quota(w, r, "draft-global-day", "all", s.config.dailyLimit(), 24*time.Hour) || !s.quota(w, r, "draft-global-minute", "all", s.config.globalLimit(), time.Minute) || !s.quota(w, r, "draft-owner-minute", id.owner, s.config.draftLimit(), time.Minute) || !s.quota(w, r, "draft-owner-day", id.owner, s.config.ownerDailyLimit(), 24*time.Hour) {
+		return
+	}
+	if id.principal.UserID != "" && (!s.quota(w, r, "draft-user-minute", id.principal.UserID, s.config.draftLimit(), time.Minute) || !s.quota(w, r, "draft-user-day", id.principal.UserID, s.config.ownerDailyLimit(), 24*time.Hour)) {
 		return
 	}
 	var order sdk.Order

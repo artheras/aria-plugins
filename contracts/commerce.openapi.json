@@ -1244,6 +1244,143 @@
         "security": [],
         "description": "PayPal signature headers are required. Capture-completed events are supported. Refund lifecycle can be checked through /sync; other event types are acknowledged without a payment-state claim."
       }
+    },
+    "/api/auth/login": {
+      "get": {
+        "summary": "Start configured OIDC browser sign-in",
+        "responses": {
+          "302": {
+            "description": "Redirect with state, nonce and PKCE"
+          },
+          "404": {
+            "description": "Account login not configured"
+          }
+        }
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "summary": "Verify OIDC code and browser-bound one-time login state",
+        "responses": {
+          "303": {
+            "description": "Signed-in session; redirect to review"
+          },
+          "401": {
+            "description": "Login denied"
+          },
+          "404": {
+            "description": "Account login not configured"
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "summary": "Revoke current browser account session",
+        "responses": {
+          "200": {
+            "description": "Signed out"
+          },
+          "403": {
+            "description": "Human session and CSRF required"
+          }
+        }
+      }
+    },
+    "/api/account/connections": {
+      "get": {
+        "summary": "List own active scoped client credentials; never returns tokens",
+        "responses": {
+          "200": {
+            "description": "Own connection metadata"
+          },
+          "403": {
+            "description": "Human session required"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create own scoped expiring client credential; token returned once",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "draft"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  },
+                  "ttl_seconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 86400,
+                    "default": 3600
+                  }
+                },
+                "required": [
+                  "scopes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New credential; store securely, never forward to the model"
+          },
+          "403": {
+            "description": "Human session, CSRF and authorized scopes required"
+          }
+        }
+      }
+    },
+    "/api/account/connections/revoke": {
+      "post": {
+        "summary": "Revoke own client credential immediately",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoked"
+          },
+          "404": {
+            "description": "Own connection not found"
+          }
+        }
+      }
     }
   },
   "components": {
