@@ -174,6 +174,18 @@ func parseCodexTOML(t *testing.T, path string) []server {
 			current.env[key], _ = value.(string)
 		case key == "command":
 			current.command, _ = value.(string)
+		case key == "env_vars":
+			names, ok := value.([]any)
+			if !ok {
+				t.Fatalf("%s:%d: env_vars must be a string array", path, line)
+			}
+			for _, item := range names {
+				name, ok := item.(string)
+				if !ok || name == "" {
+					t.Fatalf("%s:%d: invalid forwarded environment name", path, line)
+				}
+				current.env[name] = "${" + name + "}"
+			}
 		case key == "args":
 			for _, item := range value.([]any) {
 				current.args = append(current.args, item.(string))
@@ -207,12 +219,31 @@ func templates(t *testing.T, dir string) map[string][]server {
 		}
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".mcp.json")); err == nil {
-		var doc map[string]struct {
+		var entries map[string]json.RawMessage
+		loadJSON(t, filepath.Join(dir, ".mcp.json"), &entries)
+		if wrapped, ok := entries["mcpServers"]; ok {
+			var inner map[string]json.RawMessage
+			if len(entries) != 1 || json.Unmarshal(wrapped, &inner) != nil {
+				t.Fatal("invalid mcpServers wrapper")
+			}
+			entries = inner
+		}
+		doc := map[string]struct {
 			Command string            `json:"command"`
 			Args    []string          `json:"args"`
 			Env     map[string]string `json:"env"`
+		}{}
+		for name, raw := range entries {
+			var entry struct {
+				Command string            `json:"command"`
+				Args    []string          `json:"args"`
+				Env     map[string]string `json:"env"`
+			}
+			if json.Unmarshal(raw, &entry) != nil {
+				t.Fatal("invalid MCP entry", name)
+			}
+			doc[name] = entry
 		}
-		loadJSON(t, filepath.Join(dir, ".mcp.json"), &doc)
 		names := make([]string, 0, len(doc))
 		for name := range doc {
 			names = append(names, name)

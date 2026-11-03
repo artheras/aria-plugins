@@ -215,8 +215,14 @@ document.querySelectorAll('[data-copy]').forEach(button=>{
 async function init() {
   try {
     config=await api('/api/config');
-    $('mode-text').textContent=config.mode==='demo'?'DEMO MODE · Local parser and simulated payment. No AI call, PayPal transaction, or money movement.':'PAYPAL SANDBOX · AI Gateway drafts. Human approval required. Sandbox funds only.';
+    $('mode-text').textContent=config.mode==='demo'?'DEMO MODE · Payments are simulated. No PayPal transaction or money movement.':'PAYPAL SANDBOX · Human approval required. Sandbox funds only.';
     $('drafter-note').textContent='Draft engine: '+config.drafter;
+    if(config.server_text_drafting===false) {
+      $('draft-form').hidden=true;
+      const note=document.createElement('p');note.className='fine';
+      note.textContent='Create your order in connected Codex, Claude Code or Aria Code, then open its review link here.';
+      $('draft-form').after(note);
+    }
     $('connect').hidden=!config.merchant_login_available;
     await loadCatalogue();
     const session=await api('/api/session');csrf=session.csrf || '';

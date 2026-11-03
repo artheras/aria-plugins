@@ -1,0 +1,5 @@
+# Add the installed MCP binary to PATH, or use its absolute path here.
+[mcp_servers.aria-commerce]
+command = "aria-commerce-mcp"
+args = []
+env_vars = ["ARIA_COMMERCE_URL", "ARIA_MERCHANT_TOKEN", "ARIA_CLOUD_RUN_AUDIENCE"]

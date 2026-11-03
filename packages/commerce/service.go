@@ -134,13 +134,12 @@ func (s *Service) Draft(ctx context.Context, a Actor, prompt string) (sdk.Order,
 	if a.Owner == "" {
 		return sdk.Order{}, problem("session_required", "Authenticated session required.", 401, false)
 	}
-	items := s.Catalog
-	if s.ProductSource != nil {
-		var err error
-		items, err = s.ProductSource.Products(ctx)
-		if err != nil {
-			return sdk.Order{}, problem("catalogue_unavailable", "Catalogue unavailable. Try again later.", 503, true)
-		}
+	items, err := s.draftCatalog(ctx)
+	if err != nil {
+		return sdk.Order{}, err
+	}
+	if _, hostOnly := s.Drafter.(agents.Host); hostOnly {
+		return sdk.Order{}, problem("host_agent_required", "Create this draft in your connected agent using catalogue items.", 400, false)
 	}
 	d, err := s.Drafter.Draft(ctx, prompt, items)
 	if err != nil {
@@ -150,13 +149,43 @@ func (s *Service) Draft(ctx context.Context, a Actor, prompt string) (sdk.Order,
 		s.logger().WarnContext(ctx, "draft_failed", "request_id", requestID(ctx), "code", "draft_failed", "cause", err.Error())
 		return sdk.Order{}, problem("draft_failed", "Could not draft this request. Check the products and try again.", 422, false)
 	}
+	return s.saveDraft(ctx, a, d, items, s.Drafter.Name())
+}
+
+// DraftItems accepts a host agent's proposal, never its prices or authority.
+// It deliberately does not invoke the separately configured server-side model.
+func (s *Service) DraftItems(ctx context.Context, a Actor, selections []sdk.Selection) (sdk.Order, error) {
+	if a.Owner == "" {
+		return sdk.Order{}, problem("session_required", "Authenticated session required.", 401, false)
+	}
+	items, err := s.draftCatalog(ctx)
+	if err != nil {
+		return sdk.Order{}, err
+	}
+	d := agents.Draft{Items: selections, Summary: "Host-proposed selections. Review quantities and server prices before approval."}
+	return s.saveDraft(ctx, a, d, items, "Host-proposed selections (not independently verified)")
+}
+
+func (s *Service) draftCatalog(ctx context.Context) ([]sdk.Product, error) {
+	items := s.Catalog
+	if s.ProductSource != nil {
+		var err error
+		items, err = s.ProductSource.Products(ctx)
+		if err != nil {
+			return nil, problem("catalogue_unavailable", "Catalogue unavailable. Try again later.", 503, true)
+		}
+	}
+	return items, nil
+}
+
+func (s *Service) saveDraft(ctx context.Context, a Actor, d agents.Draft, items []sdk.Product, source string) (sdk.Order, error) {
 	i, err := sdk.BuildInvoice(newID(), d.Items, items)
 	if err != nil {
 		return sdk.Order{}, problem("invalid_selection", err.Error(), 422, false)
 	}
 	o := sdk.Order{Invoice: i, Owner: a.Owner, State: "draft", Summary: d.Summary, CreatedAt: s.now().Format(time.RFC3339), Digest: approvals.Digest(i)}
 	o.ExpiresAt = s.now().Add(24 * time.Hour).Format(time.RFC3339)
-	s.event(&o, "draft_created", s.Drafter.Name()+"; prices resolved from server catalogue")
+	s.event(&o, "draft_created", source+"; prices resolved from server catalogue")
 	err = s.Save(ctx, o, nil)
 	return o, err
 }
