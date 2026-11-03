@@ -128,3 +128,7 @@ credentials encrypted per merchant with refresh and revocation support. Remote
 MCP clients need user-scoped authorization, audience validation and least-privilege
 scopes. Payment approval must remain bound to the exact invoice and a human
 session. These multi-user capabilities are not implemented by the demo token.
+
+The opt-in [account pilot](accounts.md) adds OIDC browser sign-in, assigned roles
+and expiring, revocable per-user stdio client credentials for a configured
+Sandbox merchant. It does not perform PayPal seller onboarding or remote MCP OAuth.

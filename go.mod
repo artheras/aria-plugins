@@ -1,9 +1,11 @@
 module github.com/artheras/aria-plugins
 
-go 1.26.0
+go 1.26.10
 
 require (
 	cloud.google.com/go/firestore v1.26.0
+	github.com/coreos/go-oidc/v3 v3.21.0
+	github.com/go-jose/go-jose/v4 v4.1.4
 	golang.org/x/oauth2 v0.37.0
 	google.golang.org/api v0.287.1
 	google.golang.org/grpc v1.83.1

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	workflow "github.com/artheras/aria-plugins/packages/commerce"
+	"io"
 	"log/slog"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/artheras/aria-plugins/packages/accounts"
 	"github.com/artheras/aria-plugins/packages/agents"
 	merchantidentity "github.com/artheras/aria-plugins/packages/identity"
 	"github.com/artheras/aria-plugins/packages/payments"
@@ -28,6 +30,7 @@ import (
 // browser login secret. They must differ so the agent can never mint a human
 // session and approve, capture or refund its own drafts.
 type Config struct {
+	Account                                                                         *accounts.Login
 	Mode, PublicURL, SessionSecret, MerchantToken, MerchantLoginToken, DataDir      string
 	MerchantID, LegacyMerchantOwner, CatalogFile                                    string
 	Catalog                                                                         []sdk.Product
@@ -49,6 +52,17 @@ func FromEnvironment() (Config, error) { return fromEnvironment(false) }
 func FromEnvironmentForWorker() (Config, error) { return fromEnvironment(true) }
 func fromEnvironment(worker bool) (Config, error) {
 	c := Config{Mode: os.Getenv("ARIA_MODE"), PublicURL: os.Getenv("PUBLIC_URL"), SessionSecret: os.Getenv("ARIA_SESSION_SECRET"), MerchantToken: os.Getenv("ARIA_MERCHANT_TOKEN"), DataDir: os.Getenv("ARIA_DATA_DIR")}
+	accountMode := os.Getenv("ARIA_AUTH_MODE")
+	if accountMode != "" && accountMode != "demo" && accountMode != "oidc" {
+		return c, errors.New("ARIA_AUTH_MODE must be demo or oidc")
+	}
+	if !worker && accountMode != "oidc" {
+		for _, name := range []string{"ARIA_OIDC_ISSUER", "ARIA_OIDC_CLIENT_ID", "ARIA_OIDC_CLIENT_SECRET", "ARIA_ACCOUNT_BINDINGS_FILE"} {
+			if os.Getenv(name) != "" {
+				return c, errors.New("OIDC settings require explicit ARIA_AUTH_MODE=oidc")
+			}
+		}
+	}
 	// ARIA_AI=aria drafts with the signed-in Aria Code user's own model access.
 	// That login exists only on the user's machine, and a hosted service must
 	// never hold one, so refuse before anything else is configured.
@@ -152,6 +166,9 @@ func fromEnvironment(worker bool) (Config, error) {
 			*v.target = value
 		}
 	}
+	if !worker && accountMode == "oidc" && (c.MerchantToken != "" || c.MerchantLoginToken != "" || c.LegacyMerchantOwner != "" || c.MerchantID == "" || len(c.SessionSecret) < 32) {
+		return c, errors.New("OIDC requires stable merchant ID and session secret; remove legacy merchant and browser credentials and ownership migration")
+	}
 	if c.MerchantToken != "" && len(c.MerchantToken) < 32 {
 		return c, errors.New("ARIA_MERCHANT_TOKEN must contain at least 32 characters")
 	}
@@ -178,7 +195,10 @@ func fromEnvironment(worker bool) (Config, error) {
 		}
 		required := []string{"PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"}
 		if !worker {
-			required = append(required, "ARIA_MERCHANT_ID", "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN", "ARIA_SESSION_SECRET")
+			required = append(required, "ARIA_MERCHANT_ID", "ARIA_SESSION_SECRET")
+			if accountMode != "oidc" {
+				required = append(required, "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN")
+			}
 			if !ariaAI && !localParser && !vertexAI && !hostAI {
 				required = append(required, "AI_GATEWAY_MODEL")
 			}
@@ -245,6 +265,28 @@ func fromEnvironment(worker bool) (Config, error) {
 			return c, errors.New("local session key is invalid")
 		}
 		c.SessionSecret = string(b)
+	}
+	if !worker && accountMode == "oidc" {
+		raw, err := os.ReadFile(os.Getenv("ARIA_ACCOUNT_BINDINGS_FILE"))
+		if err != nil || len(raw) > 256<<10 {
+			return c, errors.New("cannot read account bindings file (256 KiB maximum)")
+		}
+		var bindings []accounts.Binding
+		decoder := json.NewDecoder(strings.NewReader(string(raw)))
+		decoder.DisallowUnknownFields()
+		if decoder.Decode(&bindings) != nil || decoder.Decode(&struct{}{}) != io.EOF {
+			return c, errors.New("invalid account bindings JSON")
+		}
+		access, err := accounts.NewAccess(c.Store, os.Getenv("ARIA_OIDC_ISSUER"), c.MerchantID, c.PublicURL, bindings)
+		if err != nil {
+			return c, err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		c.Account, err = accounts.NewLogin(ctx, access, os.Getenv("ARIA_OIDC_CLIENT_ID"), os.Getenv("ARIA_OIDC_CLIENT_SECRET"), c.PublicURL)
+		if err != nil {
+			return c, err
+		}
 	}
 	return c, nil
 }

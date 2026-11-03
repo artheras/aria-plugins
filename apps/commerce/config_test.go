@@ -218,3 +218,33 @@ func TestHostAgentSandboxNeedsNoServerModelCredentials(t *testing.T) {
 		t.Fatal("host mode silently selected another model or payment provider")
 	}
 }
+
+func TestAccountConfigurationCannotFallBackToSharedDemoCredentials(t *testing.T) {
+	for _, name := range []string{"ARIA_OIDC_ISSUER", "ARIA_OIDC_CLIENT_ID", "ARIA_OIDC_CLIENT_SECRET", "ARIA_ACCOUNT_BINDINGS_FILE", "ARIA_AUTH_MODE", "ARIA_MERCHANT_TOKEN", "ARIA_MERCHANT_LOGIN_TOKEN", "ARIA_LEGACY_MERCHANT_OWNER"} {
+		t.Setenv(name, "")
+	}
+	t.Setenv("ARIA_MODE", "demo")
+	t.Setenv("ARIA_STORE", "file")
+	t.Setenv("ARIA_DATA_DIR", t.TempDir())
+	t.Setenv("PUBLIC_URL", "http://127.0.0.1:4180")
+	t.Setenv("ARIA_OIDC_ISSUER", "https://identity.example")
+	if _, err := FromEnvironment(); err == nil {
+		t.Fatal("OIDC settings silently fell back to demo auth")
+	}
+	t.Setenv("ARIA_AUTH_MODE", "oidc")
+	t.Setenv("ARIA_MERCHANT_ID", "shop-one")
+	t.Setenv("ARIA_SESSION_SECRET", strings.Repeat("s", 32))
+	t.Setenv("ARIA_MERCHANT_TOKEN", strings.Repeat("m", 32))
+	if _, err := FromEnvironment(); err == nil {
+		t.Fatal("OIDC accepted a shared agent token")
+	}
+	t.Setenv("ARIA_MERCHANT_TOKEN", "")
+	t.Setenv("ARIA_MERCHANT_LOGIN_TOKEN", strings.Repeat("h", 32))
+	if _, err := FromEnvironment(); err == nil {
+		t.Fatal("OIDC accepted a shared browser credential")
+	}
+	t.Setenv("ARIA_MERCHANT_LOGIN_TOKEN", "")
+	if _, err := FromEnvironment(); err == nil {
+		t.Fatal("OIDC started without bindings or verified provider configuration")
+	}
+}
