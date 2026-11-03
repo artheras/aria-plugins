@@ -89,3 +89,7 @@ server-verified consent and capability checks, isolated provider credentials,
 per-merchant catalogues, and tenant-aware webhook/recovery routing. Remote MCP
 OAuth authorization is separate from this browser OIDC and scoped stdio bridge
 pilot; this service does not advertise an MCP authorization server.
+
+## Remote app connections
+
+[Remote MCP OAuth](../plugins/commerce-remote/README.md) adds user-reviewed app grants, 15-minute access tokens, refresh rotation for up to 30 days, a stable opaque profile and immediate revocation from Connected apps. Google remains the upstream identity provider; its tokens and client secret are never forwarded to MCP clients. Existing manual grants continue to work only on their REST/stdio surface. Payment actions remain browser-only.

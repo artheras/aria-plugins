@@ -121,8 +121,20 @@ func (b bridge) call(params json.RawMessage) any {
 		var auth struct {
 			Authenticated bool `json:"authenticated"`
 			Merchant      bool `json:"merchant"`
+			Account       *struct {
+				Scopes []string `json:"scopes"`
+			} `json:"account"`
 		}
-		if err != nil || json.Unmarshal([]byte(session), &auth) != nil || !auth.Authenticated || !auth.Merchant {
+		valid := err == nil && json.Unmarshal([]byte(session), &auth) == nil && auth.Authenticated
+		read := auth.Merchant
+		if auth.Account != nil {
+			for _, scope := range auth.Account.Scopes {
+				if scope == "read" {
+					read = true
+				}
+			}
+		}
+		if !valid || !read {
 			return toolResult("Merchant authentication failed, or this service predates the 0.4.0 session contract.", true)
 		}
 	case "commerce_draft_order":

@@ -26,6 +26,7 @@ import (
 
 	"github.com/artheras/aria-plugins/packages/accounts"
 	"github.com/artheras/aria-plugins/packages/agents"
+	"github.com/artheras/aria-plugins/packages/mcpauth"
 	"github.com/artheras/aria-plugins/packages/sdk"
 )
 
@@ -38,6 +39,7 @@ var Catalog = []sdk.Product{
 }
 
 type Server struct {
+	oauth   *mcpauth.Broker
 	config  Config
 	mux     *http.ServeMux
 	service *workflow.Service
@@ -91,6 +93,7 @@ func New(c Config) *Server {
 	s.mux.HandleFunc("POST /api/orders/{id}/checkout", s.checkout)
 	s.mux.HandleFunc("POST /api/orders/{id}/capture", s.capture)
 	s.mux.HandleFunc("POST /api/paypal/webhook", s.webhook)
+	s.mountMCP()
 	assets, _ := fs.Sub(web, "web")
 	s.mux.Handle("GET /", http.FileServer(http.FS(assets)))
 	return s
@@ -115,12 +118,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", s.csp())
 	w.Header().Set("Cache-Control", "no-store")
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	if r.Method == "POST" && r.URL.Path != "/api/paypal/webhook" {
+	if r.Method == "POST" && r.URL.Path != "/api/paypal/webhook" && !oauthMachine(r.URL.Path) {
 		bearer := strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if (!bearer || r.URL.Path == "/api/login") && r.Header.Get("Origin") != s.config.PublicURL {
 			fail(w, 403, "request origin does not match PUBLIC_URL")
 			return
 		}
+	}
+	if oauthMachine(r.URL.Path) && r.Header.Get("Origin") != "" && !s.mcpOrigin(r.Header.Get("Origin")) {
+		fail(w, 403, "Origin not permitted.")
+		return
 	}
 	s.mux.ServeHTTP(w, r)
 }
@@ -335,6 +342,9 @@ func (s *Server) draft(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	s.draftAs(w, r, id)
+}
+func (s *Server) draftAs(w http.ResponseWriter, r *http.Request, id identity) {
 	var body struct {
 		Prompt string           `json:"prompt"`
 		Items  *[]sdk.Selection `json:"items"`

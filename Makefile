@@ -3,6 +3,7 @@ build:
 	mkdir -p bin
 	go build -trimpath -o bin/aria-commerce ./cmd/server
 	go build -trimpath -o bin/aria-commerce-mcp ./cmd/commerce-mcp
+	go build -trimpath -o bin/aria-commerce-connect ./cmd/commerce-connect
 	go build -trimpath -o bin/aria-commerce-worker ./cmd/commerce-worker
 	go build -trimpath -o bin/aria-commerce-admin ./cmd/commerce-admin
 	go build -trimpath -o bin/aria-plugins ./cmd/aria-plugins

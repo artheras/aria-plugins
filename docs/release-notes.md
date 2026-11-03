@@ -1,22 +1,18 @@
-# Aria Plugins 0.5.1
+# Aria Plugins 0.6.0
 
-Commerce connects Codex, Claude Code and Aria Code to one shared MCP service.
-The client model proposes catalogue SKUs and quantities; Commerce validates them,
-resolves current prices and returns an unapproved order with a browser review URL.
-`ARIA_AI=host` supports PayPal Sandbox without a second server-model account.
+Commerce provides a remote Streamable HTTP MCP endpoint with OAuth, Google account
+sign-in, explicit user consent and per-app revocation. Resource-bound access lasts
+up to 15 minutes; optional rotating renewal credentials last at most 30 days.
+Authorization codes and renewal credentials have replay protection. Reader roles
+receive read-only tools; membership and revocation are checked on every call.
 
-The installation helper prints native client configurations with
-`aria-plugins config --client codex|claude-code|aria --binary ABSOLUTE_PATH`.
-Configurations reference credentials from the launching environment. Agent and
-human merchant credentials remain separate. Approval, checkout, capture and refund
-are browser-only. Older services reject host proposals until they are upgraded.
+The remote package supports ChatGPT/Codex portable manifests and Claude Code
+metadata. The new Go `aria-commerce-connect` bridge provides browser login,
+private local credential storage, renewal, disconnect and stdio transport for
+Aria Code. Existing manual-credential clients remain supported. Public directory
+publication and unrelated merchant onboarding require separate platform setup.
 
-The release includes six platform bundles with SHA256SUMS, portable Commerce,
-Finance and Computer Use workflows, and integrity locks. External services and
-client model access must be configured separately. The current Commerce service
-supports one merchant; it is not multi-tenant OAuth onboarding.
-
-Local verification covers all Go race tests and vet, native Codex tool discovery
-and catalogue/draft/status calls, Claude Code MCP connectivity and manifest
-validation. Native-client checks used simulated payments; they do not establish
-a PayPal Sandbox transaction, model inference or a clinical/financial outcome.
+The four remote tools provide profile, catalogue, unapproved drafts and order
+status. There are no approval, checkout, capture or refund tools. PayPal remains
+Sandbox-only. Bundles include the connector, existing installation helper and
+workflows with published SHA-256 checksums.

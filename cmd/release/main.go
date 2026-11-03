@@ -69,7 +69,7 @@ func build(root, out, platform string) (string, error) {
 	}
 	defer os.RemoveAll(tmp)
 	files := map[string]string{}
-	for binary, source := range map[string]string{"aria-commerce-mcp": "./cmd/commerce-mcp", "aria-plugins": "./cmd/aria-plugins"} {
+	for binary, source := range map[string]string{"aria-commerce-mcp": "./cmd/commerce-mcp", "aria-commerce-connect": "./cmd/commerce-connect", "aria-plugins": "./cmd/aria-plugins"} {
 		name := binary + distribution.Extension(goos)
 		path := filepath.Join(tmp, name)
 		command := exec.Command("go", "build", "-trimpath", "-ldflags=-s -w", "-o", path, source)
@@ -85,7 +85,7 @@ func build(root, out, platform string) (string, error) {
 		}
 		files["bin/"+name] = path
 	}
-	for _, dir := range []string{"plugins/commerce", "skills/commerce", "plugins/finance", "skills/finance", "plugins/computer-use", "skills/computer-use", ".claude-plugin", "contracts"} {
+	for _, dir := range []string{"plugins/commerce-remote", "plugins/commerce", "skills/commerce", "plugins/finance", "skills/finance", "plugins/computer-use", "skills/computer-use", ".claude-plugin", "contracts"} {
 		if err = filepath.WalkDir(filepath.Join(root, dir), func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err

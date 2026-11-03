@@ -69,6 +69,9 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	if id := r.URL.Query().Get("order"); reviewOrderID.MatchString(id) {
 		a.Return = "/?order=" + id
 	}
+	if path := connectReturn(r.URL.Query().Get("connect")); path != "" {
+		a.Return = path
+	}
 	raw, _ := json.Marshal(a)
 	cipher := s.cursorCipher()
 	nonce := make([]byte, cipher.NonceSize())
@@ -123,7 +126,7 @@ func (s *Server) authCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{Name: accountCookie, Value: token, Path: "/", HttpOnly: true, Secure: strings.HasPrefix(s.config.PublicURL, "https://"), SameSite: http.SameSiteLaxMode, MaxAge: int(ttl.Seconds())})
 	s.logger.InfoContext(r.Context(), "account_login", "user_id", p.UserID, "merchant_id", p.MerchantID)
-	if a.Return != "/" && !strings.HasPrefix(a.Return, "/?order=") {
+	if a.Return != "/" && !strings.HasPrefix(a.Return, "/?order=") && !strings.HasPrefix(a.Return, "/oauth/consent?request=") {
 		a.Return = "/"
 	}
 	http.Redirect(w, r, a.Return, http.StatusSeeOther)

@@ -2,7 +2,7 @@
 
 An Aria Code workflow that reads a merchant catalogue, prepares an order draft, and reports order status through the Go Commerce MCP bridge. The user reviews and pays in the merchant browser session.
 
-Version: **0.5.1**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, credential-free simulation. PayPal Sandbox and AI Gateway require credentials.
+Version: **0.6.0**. Runtime: Go 1.26+; MCP stdio. Default mode is a labelled, credential-free simulation. PayPal Sandbox and AI Gateway require credentials.
 
 | Component | Purpose |
 | --- | --- |

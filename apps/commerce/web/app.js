@@ -106,13 +106,7 @@ async function loadOrder(id) { order=await api('/api/orders/'+encodeURIComponent
 function clearOrder() {
   order=null;$('empty').hidden=false;$('order-content').hidden=true;$('refresh').hidden=true;$('state').textContent='Ready when you are';$('state').classList.remove('paid');$('audit').replaceChildren();appendText($('audit'),'li','Select an order or create a draft to view its activity.','audit-placeholder');
 }
-async function loadCatalogue() {
-  catalogue=await api('/api/catalog'); $('catalog').replaceChildren();
-  for(const product of catalogue) {
-    const card=document.createElement('div');card.className='product';
-    appendText(card,'span',product.sku,'product-code');appendText(card,'span',product.name,'product-name');appendText(card,'span',money(product.unit_amount),'product-price');$('catalog').append(card);
-  }
-}
+async function loadCatalogue() { catalogue=await api('/api/catalog'); }
 async function loadHistory(more=false) {
   const params=new URLSearchParams({limit:'12',q:$('history-query').value,state:$('history-state').value,review:$('history-review').checked?'1':'0'});
   if(more && historyCursor) params.set('cursor',historyCursor);
@@ -181,10 +175,6 @@ $('catalogue-form').addEventListener('submit',e=>{e.preventDefault();run(async()
     await api('/api/catalog/update',{digest:catalogueDigest,products});$('catalogue-dialog').close();await loadCatalogue();feedback('Products saved. Existing reviewed invoices keep their original prices.');
   } catch(error) { $('catalogue-error').textContent=error.message;throw error; }
 });});
-$('draft-form').addEventListener('submit',event=>{
-  event.preventDefault(); run(async()=>{order=await api('/api/orders',{prompt:$('prompt').value});render();await loadHistory();feedback('Draft ready. Review the invoice before approval.');});
-});
-$('example').addEventListener('click',()=>{$('prompt').value='Create an order for 3 caps and 2 mugs.';$('prompt').focus();});
 $('approve').addEventListener('click',()=>run(async()=>{order=await api('/api/orders/'+order.id+'/approve',{digest:order.digest});render();await loadHistory();feedback('You approved this exact invoice.');}));
 $('checkout').addEventListener('click',()=>run(async()=>{order=await api('/api/orders/'+order.id+'/checkout',{});render();await loadHistory();feedback(config.mode==='demo'?'Simulated checkout created.':'PayPal Sandbox checkout created.');}));
 $('capture').addEventListener('click',()=>run(async()=>{order=await api('/api/orders/'+order.id+'/capture',{});render();await loadHistory();feedback(config.mode==='demo'?'Demo payment reconciled. No real payment was made.':'PayPal capture reconciled successfully.');}));
@@ -221,14 +211,6 @@ async function init() {
   try {
     config=await api('/api/config');
     $('mode-text').textContent=config.mode==='demo'?'DEMO MODE · Payments are simulated. No PayPal transaction or money movement.':'PAYPAL SANDBOX · Human approval required. Sandbox funds only.';
-    $('drafter-note').textContent='Draft engine: '+config.drafter;
-    if(config.server_text_drafting===false) {
-      $('draft-form').hidden=true;
-      const note=document.createElement('p');note.className='fine';
-      note.id='host-draft-instruction';
-      note.textContent='Create your order in connected Codex, Claude Code or Aria Code, then open its review link here.';
-      $('draft-form').after(note);
-    }
     $('connect').hidden=!config.merchant_login_available && config.auth_mode!=='oidc';
     if(config.auth_mode==='oidc') {
       $('connect').textContent='Your account';$('login-form').hidden=true;$('account-signin').hidden=false;
@@ -241,7 +223,6 @@ async function init() {
     if(account) {
       $('account-panel').hidden=false;$('account-summary').textContent='Merchant: '+account.merchant_id+' · Role: '+account.role;
       $('draft-scope-option').disabled=!account.scopes.includes('draft');
-      if(!account.scopes.includes('draft')) {$('draft-form').hidden=true;if($('host-draft-instruction')) $('host-draft-instruction').textContent='Your account has read-only access. Select an existing order to view its details.';}
       await loadConnections();
     }
     if(!session.authenticated) {$('login-dialog').showModal();return;}
@@ -254,6 +235,12 @@ init();
 
 
 async function loadConnections() {
+  const apps=await api('/api/account/apps');$('mcp-url').value=apps.mcp_url;$('account-apps').replaceChildren();
+  for(const c of apps.apps) {
+    const row=document.createElement('li');appendText(row,'span',c.name+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());
+    const button=appendText(row,'button','Revoke','quiet');button.type='button';button.addEventListener('click',()=>run(async()=>{await api('/api/account/apps/revoke',{id:c.id});await loadConnections();feedback('App connection revoked. Access and renewal have stopped.');}));$('account-apps').append(row);
+  }
+
   const data=await api('/api/account/connections');$('account-connections').replaceChildren();
   for(const c of data.connections) {
     const row=document.createElement('li');appendText(row,'span',(c.label || 'Client')+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());

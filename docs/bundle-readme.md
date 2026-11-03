@@ -1,10 +1,10 @@
-# Aria Plugins 0.5.1 — Portable plugins
+# Aria Plugins 0.6.0 — Portable plugins
 
 This package contains the Go MCP bridge, the `aria-plugins` installation helper,
 the versioned Commerce workflow, integrity locks, and public JSON contracts.
 
 1. Download the ZIP for your operating system and architecture, plus SHA256SUMS,
-   from https://github.com/artheras/aria-plugins/releases/tag/v0.5.1.
+   from https://github.com/artheras/aria-plugins/releases/tag/v0.6.0.
 2. Verify the checksum before running the extracted installation helper.
 3. Install into a directory you own:
 
@@ -30,7 +30,7 @@ For private Cloud Run, also configure ADC and ARIA_CLOUD_RUN_AUDIENCE as describ
 in https://github.com/artheras/aria-plugins/blob/main/docs/cloud-run.md.
 
 ```sh
-./bin/aria-plugins doctor --dir /absolute/path/to/aria-plugin-tools/0.5.1
+./bin/aria-plugins doctor --dir /absolute/path/to/aria-plugin-tools/0.6.0
 ```
 
 Doctor negotiates MCP, checks the three tools, and makes one read-only catalogue
@@ -39,7 +39,7 @@ call. It does not approve, capture or refund a payment.
 Install the matching skill in a compatible Aria Code session:
 
 ```text
-/skills add artheras/aria-plugins --ref v0.5.1
+/skills add artheras/aria-plugins --ref v0.6.0
 /skills doctor
 ```
 
@@ -55,3 +55,7 @@ Its MCP configuration entry is retained for explicit removal or disabling;
 skills, credentials, other versions and order data are preserved.
 
 The catalogue also includes the Finance skill and configuration templates. The Finance Python service is installed separately from artheras/financial-service; this bundle does not install it or enable external financial data access.
+
+## Remote OAuth connection
+
+Use `./bin/aria-commerce-connect login`, then register `./bin/aria-commerce-connect serve` as an absolute-path stdio server in Aria Code. `status` prints no credentials; `logout` revokes the remote grant and removes the local credential. See `plugins/commerce-remote/README.md` for ChatGPT, Claude, Codex and Aria connection management.

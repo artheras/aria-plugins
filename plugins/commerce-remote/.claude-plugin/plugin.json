@@ -1,0 +1,11 @@
+{
+  "name": "aria-commerce-remote",
+  "version": "0.1.0",
+  "description": "Read products, create unapproved order drafts and track order status through your own Aria Commerce account.",
+  "author": {
+    "name": "Arthera"
+  },
+  "repository": "https://github.com/artheras/aria-plugins",
+  "license": "Apache-2.0",
+  "privacyPolicyUrl": "https://aria-commerce-sandbox-vrkp6bxpya-nw.a.run.app/privacy.html"
+}
