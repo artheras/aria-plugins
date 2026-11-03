@@ -128,6 +128,15 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, 400, "invalid_request")
 		return
 	}
+	// Browsers enforce form-action across the POST's redirect chain. Permit
+	// only this transaction's validated callback origin, never a global wildcard.
+	policyCallback, parseErr := url.Parse(q.Redirect)
+	if parseErr != nil || policyCallback.Host == "" {
+		oauthError(w, 400, "invalid_request")
+		return
+	}
+	callbackOrigin := policyCallback.Scheme + "://" + policyCallback.Host
+	w.Header().Set("Content-Security-Policy", strings.Replace(s.csp(), "form-action 'self'", "form-action 'self' "+callbackOrigin, 1))
 	id, e := s.accountIdentity(r)
 	if e != nil || id.bearer {
 		if r.Method == "GET" {
