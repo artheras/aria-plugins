@@ -3,12 +3,7 @@
   "mcpServers": {
     "aria-commerce": {
       "type": "streamable-http",
-      "url": "https://aria-commerce-sandbox-vrkp6bxpya-nw.a.run.app/mcp",
-      "extensions": {
-        "com.openai": {
-          "auth": {"type": "oauth", "client": {"mode": "dcr"}, "baseScopes": ["read", "draft", "offline_access"]}
-        }
-      }
+      "url": "https://aria-commerce-sandbox-vrkp6bxpya-nw.a.run.app/mcp"
     }
   }
 }
