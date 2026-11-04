@@ -123,6 +123,21 @@ func TestRemoteMCPFullOAuthAndHumanBoundary(t *testing.T) {
 	if !strings.Contains(string(raw), `"state":"draft"`) {
 		t.Fatal("not unapproved", string(raw))
 	}
+	var created struct {
+		ID        string `json:"id"`
+		ReviewURL string `json:"review_url"`
+	}
+	if json.Unmarshal(raw, &created) != nil || created.ReviewURL != web.URL+"/?order="+created.ID || !reviewOrderID.MatchString(created.ID) {
+		t.Fatal("missing trusted review link")
+	}
+	restored, readErr := session.CallTool(ctx, &mcp.CallToolParams{Name: "commerce_get_order", Arguments: map[string]any{"order_id": created.ID}})
+	if readErr != nil || restored.IsError {
+		t.Fatal("read order with review link failed", readErr)
+	}
+	restoredRaw, _ := json.Marshal(restored.StructuredContent)
+	if !strings.Contains(string(restoredRaw), created.ReviewURL) {
+		t.Fatal("read result lost review link")
+	}
 	// MCP access, old manual grants, cookies and refresh credentials cannot cross surfaces.
 	req, _ = http.NewRequest("GET", web.URL+"/api/catalog", nil)
 	req.Header.Set("Authorization", "Bearer "+tokens.Access)
