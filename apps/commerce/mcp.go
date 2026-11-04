@@ -157,7 +157,13 @@ func (s *Server) mcpServer(r *http.Request, p accounts.Principal) *mcp.Server {
 			return nil, errors.New("Provide only a valid order_id.")
 		}
 		o, e := s.service.Get(ctx, actor(identity{owner: s.merchantOwner(), bearer: true}), a.OrderID)
-		return public(o), e
+		if e != nil {
+			return nil, e
+		}
+		return struct {
+			sdk.Order
+			ReviewURL string `json:"review_url"`
+		}{public(o), s.config.PublicURL + "/?order=" + o.ID}, nil
 	})
 	if p.Allows("draft") {
 		selection := objectSchema(map[string]any{"sku": map[string]any{"type": "string"}, "quantity": map[string]any{"type": "integer", "minimum": 1, "maximum": 100}}, "sku", "quantity")
@@ -181,6 +187,11 @@ func (s *Server) mcpServer(r *http.Request, p accounts.Principal) *mcp.Server {
 			if json.Unmarshal(out.body.Bytes(), &v) != nil {
 				return nil, errors.New("Invalid order response.")
 			}
+			orderID, validID := v["id"].(string)
+			if !validID || !reviewOrderID.MatchString(orderID) {
+				return nil, errors.New("Invalid order response.")
+			}
+			v["review_url"] = s.config.PublicURL + "/?order=" + orderID
 			return v, nil
 		})
 	}
