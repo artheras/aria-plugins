@@ -31,6 +31,7 @@ import (
 // browser login secret. They must differ so the agent can never mint a human
 // session and approve, capture or refund its own drafts.
 type Config struct {
+	PayPalVault                                                                     *paypalaccounts.Vault
 	PayPalAccounts                                                                  *paypalaccounts.Reader
 	LegacyTools                                                                     bool
 	Account                                                                         *accounts.Login
@@ -155,6 +156,20 @@ func fromEnvironment(worker bool) (Config, error) {
 		}
 	default:
 		return c, errors.New("ARIA_STORE must be file, redis, or firestore")
+	}
+	if keyFile := os.Getenv("ARIA_PAYPAL_VAULT_KEYS_FILE"); keyFile != "" && !worker {
+		if accountMode != "oidc" {
+			return c, errors.New("PayPal grant storage requires ARIA_AUTH_MODE=oidc")
+		}
+		raw, e := os.ReadFile(keyFile)
+		if e != nil || len(raw) > 8192 {
+			return c, errors.New("cannot read PayPal grant encryption key ring")
+		}
+		c.PayPalVault, e = paypalaccounts.LoadVault(c.Store, raw)
+		if e != nil {
+			return c, errors.New("invalid PayPal grant encryption key ring")
+		}
+		c.PayPalAccounts = paypalaccounts.New(c.PayPalVault)
 	}
 	for _, v := range []struct {
 		name   string
