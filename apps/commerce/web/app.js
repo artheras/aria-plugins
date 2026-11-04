@@ -222,7 +222,6 @@ async function init() {
     account=session.account || null;
     if(account) {
       $('account-panel').hidden=false;$('account-summary').textContent='Merchant: '+account.merchant_id+' · Role: '+account.role;
-      $('draft-scope-option').disabled=!account.scopes.includes('draft');
       await loadConnections();
     }
     if(!session.authenticated) {$('login-dialog').showModal();return;}
@@ -244,17 +243,8 @@ async function loadConnections() {
   const data=await api('/api/account/connections');$('account-connections').replaceChildren();
   for(const c of data.connections) {
     const row=document.createElement('li');appendText(row,'span',(c.label || 'Client')+' · '+c.scopes.join(', ')+' · expires '+new Date(c.expires_at*1000).toLocaleString());
-    const button=appendText(row,'button','Revoke','quiet');button.type='button';button.addEventListener('click',()=>run(async()=>{await api('/api/account/connections/revoke',{id:c.id});$('connection-token').value='';$('connection-result').hidden=true;await loadConnections();feedback('Connection revoked. Its next request will be rejected.');}));$('account-connections').append(row);
+    const button=appendText(row,'button','Revoke','quiet');button.type='button';button.addEventListener('click',()=>run(async()=>{await api('/api/account/connections/revoke',{id:c.id});await loadConnections();feedback('Connection revoked. Its next request will be rejected.');}));$('account-connections').append(row);
   }
 }
-$('connection-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
-  $('connection-token').value='';$('connection-result').hidden=true;
-  const scopes=$('connection-scope').value==='draft'?['read','draft']:['read'];
-  const data=await api('/api/account/connections',{label:$('connection-label').value,scopes,ttl_seconds:Number($('connection-expiry').value)});
-  $('connection-token').value=data.token;$('connection-result').hidden=false;await loadConnections();
-});});
-$('clear-connection-token').addEventListener('click',()=>{$('connection-token').value='';$('connection-result').hidden=true;});
-$('account-logout').addEventListener('click',()=>run(async()=>{await api('/api/logout',{});$('connection-token').value='';location.replace('/');}));
+$('account-logout').addEventListener('click',()=>run(async()=>{await api('/api/logout',{});location.replace('/');}));
 
-$('copy-connection-token').addEventListener('click',()=>run(async()=>{if(!$('connection-token').value) throw new Error('No credential to copy.');await navigator.clipboard.writeText($('connection-token').value);feedback('Credential copied. Save it in your local credential store, outside the chat.');}));
-window.addEventListener('pagehide',()=>{$('connection-token').value='';$('connection-result').hidden=true;});

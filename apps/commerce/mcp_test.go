@@ -3,11 +3,13 @@ package commerce
 import (
 	"context"
 	"encoding/json"
+	"github.com/artheras/aria-plugins/packages/accounts"
 	"github.com/artheras/aria-plugins/packages/mcpauth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"golang.org/x/oauth2"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -103,7 +105,7 @@ func TestRemoteMCPFullOAuthAndHumanBoundary(t *testing.T) {
 	}
 	defer session.Close()
 	tools, e := session.ListTools(ctx, nil)
-	if e != nil || len(tools.Tools) != 4 {
+	if e != nil || len(tools.Tools) != 6 {
 		t.Fatal("tool discovery", e)
 	}
 	for _, tool := range tools.Tools {
@@ -114,6 +116,18 @@ func TestRemoteMCPFullOAuthAndHumanBoundary(t *testing.T) {
 	profile, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "commerce_profile", Arguments: map[string]any{}})
 	if e != nil || profile.IsError {
 		t.Fatal("profile", e)
+	}
+	providerStatus, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "paypal_connection_status", Arguments: map[string]any{}})
+	if e != nil || providerStatus.IsError {
+		t.Fatal("provider status unavailable", e)
+	}
+	statusJSON, _ := json.Marshal(providerStatus.StructuredContent)
+	if !strings.Contains(string(statusJSON), `"connected":false`) {
+		t.Fatal("Aria login inferred PayPal consent")
+	}
+	blocked, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "paypal_list_invoices", Arguments: map[string]any{}})
+	if e != nil || !blocked.IsError {
+		t.Fatal("old read grant gained PayPal access", e)
 	}
 	draft, e := session.CallTool(ctx, &mcp.CallToolParams{Name: "commerce_draft_order", Arguments: map[string]any{"items": []map[string]any{{"sku": "TSH-001", "quantity": 1}}}})
 	if e != nil || draft.IsError {
@@ -177,5 +191,41 @@ func TestRemoteMCPFullOAuthAndHumanBoundary(t *testing.T) {
 	}
 	if _, e = s.oauth.Token(ctx, "refresh_token", tokens.Refresh, client.ID, "", web.URL+"/mcp", "", ""); e == nil {
 		t.Fatal("revoked refresh accepted")
+	}
+}
+
+func TestDefaultMCPDiscoveryOmitsLegacyOrders(t *testing.T) {
+	ctx := context.Background()
+	p := newTestIdentityProvider(t)
+	s, _, a := accountServer(t, p)
+	s.config.LegacyTools = false
+	principal := a.Bindings
+	var user accounts.Principal
+	for _, v := range principal {
+		user = v
+		break
+	}
+	server := s.mcpServer(httptest.NewRequest("POST", "http://127.0.0.1/mcp", nil), user)
+	left, right := mcp.NewInMemoryTransports()
+	ss, e := server.Connect(ctx, left, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer ss.Close()
+	cs, e := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil).Connect(ctx, right, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer cs.Close()
+	list, e := cs.ListTools(ctx, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	names := map[string]bool{}
+	for _, tool := range list.Tools {
+		names[tool.Name] = true
+	}
+	if len(names) != 3 || !names["commerce_profile"] || !names["paypal_connection_status"] || !names["paypal_list_invoices"] {
+		t.Fatal(names)
 	}
 }

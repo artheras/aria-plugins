@@ -142,12 +142,12 @@ func (b *Broker) Client(ctx context.Context, id string) (Client, error) {
 	return c, nil
 }
 func validScopes(v []string) bool {
-	if len(v) == 0 || len(v) > 3 || !slices.Contains(v, "read") {
+	if len(v) == 0 || len(v) > 4 || !slices.Contains(v, "read") {
 		return false
 	}
 	seen := map[string]bool{}
 	for _, s := range v {
-		if seen[s] || !slices.Contains([]string{"read", "draft", "offline_access"}, s) {
+		if seen[s] || !slices.Contains([]string{"read", "draft", "offline_access", "paypal.read"}, s) {
 			return false
 		}
 		seen[s] = true
@@ -193,7 +193,7 @@ func (b *Broker) load(ctx context.Context, user string) (record, []byte, error) 
 func (b *Broker) effective(p accounts.Principal, scopes []string) []string {
 	out := []string{}
 	for _, s := range scopes {
-		if s == "offline_access" || p.Allows(s) {
+		if s == "offline_access" || p.Allows(s) || (s == "paypal.read" && p.Allows("read")) {
 			out = append(out, s)
 		}
 	}

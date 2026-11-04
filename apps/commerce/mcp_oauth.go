@@ -40,11 +40,11 @@ func (s *Server) mountMCP() {
 	}
 }
 func (s *Server) resourceMetadata(w http.ResponseWriter, r *http.Request) {
-	write(w, 200, map[string]any{"resource": s.oauth.Resource(), "authorization_servers": []string{s.config.PublicURL}, "scopes_supported": []string{"read", "draft", "offline_access"}, "bearer_methods_supported": []string{"header"}, "resource_name": "Aria Commerce Sandbox"})
+	write(w, 200, map[string]any{"resource": s.oauth.Resource(), "authorization_servers": []string{s.config.PublicURL}, "scopes_supported": []string{"read", "draft", "offline_access", "paypal.read"}, "bearer_methods_supported": []string{"header"}, "resource_name": "Aria Commerce Sandbox"})
 }
 func (s *Server) authorizationMetadata(w http.ResponseWriter, r *http.Request) {
 	origin := s.config.PublicURL
-	write(w, 200, map[string]any{"issuer": origin, "authorization_endpoint": origin + "/oauth/authorize", "token_endpoint": origin + "/oauth/token", "registration_endpoint": origin + "/oauth/register", "revocation_endpoint": origin + "/oauth/revoke", "response_types_supported": []string{"code"}, "grant_types_supported": []string{"authorization_code", "refresh_token"}, "token_endpoint_auth_methods_supported": []string{"none"}, "code_challenge_methods_supported": []string{"S256"}, "scopes_supported": []string{"read", "draft", "offline_access"}, "authorization_response_iss_parameter_supported": true})
+	write(w, 200, map[string]any{"issuer": origin, "authorization_endpoint": origin + "/oauth/authorize", "token_endpoint": origin + "/oauth/token", "registration_endpoint": origin + "/oauth/register", "revocation_endpoint": origin + "/oauth/revoke", "response_types_supported": []string{"code"}, "grant_types_supported": []string{"authorization_code", "refresh_token"}, "token_endpoint_auth_methods_supported": []string{"none"}, "code_challenge_methods_supported": []string{"S256"}, "scopes_supported": []string{"read", "draft", "offline_access", "paypal.read"}, "authorization_response_iss_parameter_supported": true})
 }
 func oauthError(w http.ResponseWriter, status int, code string) {
 	write(w, status, map[string]string{"error": code})
@@ -107,7 +107,7 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/oauth/consent?request="+id, 303)
 }
 
-var consentPage = template.Must(template.New("consent").Parse(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Connect Aria Commerce</title><link rel="stylesheet" href="/style.css"><body><main><h1>Connect Aria Commerce Sandbox</h1><p>The application calls itself <strong>{{.Name}}</strong>. This name is supplied by the application.</p><p>Exact callback: <code>{{.Redirect}}</code></p><p>Account role: {{.Role}}. Granted permissions: <strong>{{.Scopes}}</strong>.</p><p>This connection can read the assigned merchant's catalogue and orders. Draft access creates unapproved orders only. It cannot approve, pay, capture, refund, or manage accounts.</p><p>{{.Expiry}}</p><p><a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a></p><p>You can revoke access at any time in Your connected account → Connected apps.</p><form method="post" action="/oauth/consent"><input type="hidden" name="request" value="{{.ID}}"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="decision" value="allow">Allow connection</button> <button name="decision" value="deny">Cancel</button></form></main></body></html>`))
+var consentPage = template.Must(template.New("consent").Parse(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Connect Aria Commerce</title><link rel="stylesheet" href="/style.css"><body><main><h1>Connect Aria Commerce Sandbox</h1><p>The application calls itself <strong>{{.Name}}</strong>. This name is supplied by the application.</p><p>Exact callback: <code>{{.Redirect}}</code></p><p>Account role: {{.Role}}. Granted permissions: <strong>{{.Scopes}}</strong>.</p><p>Read access covers Aria connection status and, where enabled, legacy test records. Draft access is for legacy unapproved orders only. The separate paypal.read permission allows reading invoices from your independently authorized PayPal merchant; it requires PayPal consent too. Existing read or draft grants do not include paypal.read. This connection cannot approve, pay, capture, refund, or manage accounts.</p><p>{{.Expiry}}</p><p><a href="/privacy.html" target="_blank" rel="noopener">Privacy policy</a></p><p>You can revoke access at any time in Your connected account → Connected apps.</p><form method="post" action="/oauth/consent"><input type="hidden" name="request" value="{{.ID}}"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="decision" value="allow">Allow connection</button> <button name="decision" value="deny">Cancel</button></form></main></body></html>`))
 
 func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 	request := r.URL.Query().Get("request")
@@ -154,7 +154,7 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 		}
 		scopes := []string{}
 		for _, v := range q.Scopes {
-			if v == "offline_access" || id.principal.Allows(v) {
+			if v == "offline_access" || id.principal.Allows(v) || (v == "paypal.read" && id.principal.Allows("read")) {
 				scopes = append(scopes, v)
 			}
 		}

@@ -1381,6 +1381,25 @@
           }
         }
       }
+    },
+    "/api/account/paypal": {
+      "get": {
+        "summary": "Current user PayPal authorization status, separate from Aria login",
+        "operationId": "get__api_account_paypal",
+        "responses": {
+          "200": {
+            "description": "Connected or not_connected; never includes credentials"
+          },
+          "default": {
+            "description": "Authentication or provider availability error"
+          }
+        },
+        "security": [
+          {
+            "browserSession": []
+          }
+        ]
+      }
     }
   },
   "components": {

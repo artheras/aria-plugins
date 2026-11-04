@@ -2,17 +2,15 @@
 
 Portable plugins for **ChatGPT, Codex, Claude and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
 
-**Commerce** is the first plugin. Its Go service turns a natural-language request into a catalogue order draft. The user reviews its exact contents in the browser, and a PayPal Sandbox capture is reconciled before the order is marked paid. Use the plugin inside your AI client; the service keeps a separate account and exact-order review console.
+**Commerce** provides a remote MCP connection for ChatGPT, Codex, Claude and Aria. Its default tools check separate PayPal authorization and read invoices only through a server-verified user merchant grant. The hosted service currently reports PayPal accounts as **not connected**: independent merchant onboarding is not configured. See [PayPal account access](docs/paypal-accounts.md). Existing exact-order Sandbox review links remain available; legacy remote catalogue/draft tools are opt-in.
 
 **Finance** connects to the independent [Financial Service](https://github.com/artheras/financial-service) for statements, SEC evidence, risk metrics, historical data and simulated backtests. Its financial algorithms live in that service, not this catalogue. See [Finance setup](plugins/finance/README.md).
 
-## How PayPal and AI are used
+## PayPal integration
 
-**PayPal (Sandbox).** The server talks to PayPal's REST API directly (there is no Go SDK): Orders v2 to create and capture an order, `verify-webhook-signature` to authenticate webhooks, and the Reporting API (Transaction Search, Balances) in a separate **read-only** client that cannot move money. In the browser the PayPal JavaScript buttons collect the buyer's approval, but the server alone creates, captures and checks every order against the approved invoice (amount, currency, invoice ID); a webhook reconciles independently and a replay is a no-op.
+The account reader uses PayPal Invoicing v2 with a separately authorized user merchant. It requires explicit `paypal.read` MCP consent plus verified provider capability. No real account data is returned until both are available; there is no fallback to the test catalogue or the shared checkout app. This adapter is covered by local provider/identity tests, not a live merchant authorization. [Connection and provider requirements](docs/paypal-accounts.md).
 
-**AI.** Codex, Claude Code or Aria Code can read the catalogue and submit structured item selections using their own model. The server resolves prices and creates an unapproved draft, with no second AI account required (`ARIA_AI=host` for Sandbox without a server model). [Connect your client](docs/clients.md). Alternatively, a server-side model turns a natural-language request ("two tees and a mug", or the same in Chinese) into catalogue selections. Optional server-side drafting uses Gemini on **Google Vertex AI**, called as the service's own Google identity (`ARIA_AI=vertex`); locally it can use your signed-in Aria Code account (`ARIA_AI=aria`). The model only *proposes* items. Prices come from a trusted catalogue, unknown SKUs and unknown fields are rejected, and approval, checkout, capture and refund are **not available to the agent at all**: they need a human browser session. The same tools are exposed over MCP, so an agent such as Aria Code can draft orders for a person to review.
-
-Try it: the hosted Sandbox service is described in [docs/sandbox-deployment.md](docs/sandbox-deployment.md); locally, `scripts/run-sandbox-local.sh` runs it against your own Sandbox credentials.
+The separate Sandbox order workflow uses Orders v2, signature-verified webhooks and human browser approval. Host AI clients can propose catalogue selections in the opt-in legacy workflow. Approval, checkout, capture and refund are not MCP tools. This test workflow does not establish access to a user's PayPal account.
 
 ## Account access
 
