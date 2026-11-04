@@ -15,6 +15,7 @@ import (
 	workflow "github.com/artheras/aria-plugins/packages/commerce"
 	merchantidentity "github.com/artheras/aria-plugins/packages/identity"
 	"github.com/artheras/aria-plugins/packages/limits"
+	"github.com/artheras/aria-plugins/packages/paypalaccounts"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -48,6 +49,9 @@ type Server struct {
 }
 
 func New(c Config) *Server {
+	if c.PayPalVault != nil {
+		c.PayPalAccounts = paypalaccounts.New(c.PayPalVault)
+	}
 	if c.Logger == nil {
 		c.Logger = slog.Default()
 	}
@@ -70,6 +74,7 @@ func New(c Config) *Server {
 		write(w, 200, cfg)
 	})
 	s.mux.HandleFunc("GET /api/account/paypal", s.paypalStatus)
+	s.mux.HandleFunc("POST /api/account/paypal/disconnect", s.paypalDisconnect)
 	s.mux.HandleFunc("GET /api/session", s.session)
 	s.mux.HandleFunc("POST /api/login", s.login)
 	s.mux.HandleFunc("GET /api/auth/login", s.authLogin)

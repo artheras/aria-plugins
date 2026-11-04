@@ -1400,6 +1400,25 @@
           }
         ]
       }
+    },
+    "/api/account/paypal/disconnect": {
+      "post": {
+        "summary": "Disconnect the current user PayPal grant from Aria; does not revoke provider-side consent",
+        "operationId": "post__api_account_paypal_disconnect",
+        "responses": {
+          "200": {
+            "description": "Local grant disconnected and credential material removed"
+          },
+          "default": {
+            "description": "Authentication, CSRF, configuration or storage error"
+          }
+        },
+        "security": [
+          {
+            "browserSession": []
+          }
+        ]
+      }
     }
   },
   "components": {

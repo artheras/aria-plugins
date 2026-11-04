@@ -3,9 +3,11 @@ package commerce
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/artheras/aria-plugins/packages/agents"
 	"github.com/artheras/aria-plugins/packages/payments"
@@ -35,6 +37,59 @@ func TestDefaultConnectionPageAndExactReviewLink(t *testing.T) {
 			t.Fatal(w.Code)
 		}
 	}
+}
+
+func TestPayPalDisconnectIsUserBoundHumanOnlyAndCSRFProtected(t *testing.T) {
+	p := newTestIdentityProvider(t)
+	s, web, _ := accountServer(t, p)
+	human := signedInAccount(t, web, p)
+	vault, e := paypalaccounts.NewVault(s.config.Store, "test", map[string][]byte{"test": []byte(strings.Repeat("k", 32))})
+	if e != nil {
+		t.Fatal(e)
+	}
+	s.config.PayPalVault = vault
+	s.config.PayPalAccounts = paypalaccounts.New(vault)
+	var session struct {
+		Account struct {
+			UserID string `json:"user_id"`
+		} `json:"account"`
+	}
+	json.Unmarshal(human.request("GET", "/api/session", nil, 200), &session)
+	user := session.Account.UserID
+	before, _ := vault.Begin(t.Context(), user)
+	g := paypalaccounts.Grant{UserID: user, MerchantID: "verified-user-merchant", Environment: "sandbox", AccessToken: "not-an-actual-provider-token", Capabilities: []string{"invoices.read"}, VerifiedAt: time.Now().Add(-time.Minute), ExpiresAt: time.Now().Add(time.Hour)}
+	if e = vault.Complete(t.Context(), user, before, g); e != nil {
+		t.Fatal(e)
+	}
+	raw := human.request("GET", "/api/account/paypal", nil, 200)
+	if !strings.Contains(string(raw), `"connected":true`) || strings.Contains(string(raw), g.AccessToken) {
+		t.Fatal("status invalid")
+	}
+	var agent struct {
+		Token string `json:"token"`
+	}
+	json.Unmarshal(human.request("POST", "/api/account/connections", map[string]any{"label": "test", "scopes": []string{"read"}, "ttl_seconds": 3600}, 201), &agent)
+	req, _ := http.NewRequest("POST", web.URL+"/api/account/paypal/disconnect", strings.NewReader(`{}`))
+	req.Header.Set("Authorization", "Bearer "+agent.Token)
+	response, e := web.Client().Do(req)
+	if e != nil {
+		t.Fatal(e)
+	}
+	response.Body.Close()
+	if response.StatusCode != 403 {
+		t.Fatal("agent disconnected provider", response.StatusCode)
+	}
+	human.request("POST", "/api/account/paypal/disconnect", map[string]string{"user_id": "another-user"}, 400)
+	csrf := human.csrf
+	human.csrf = "bad"
+	human.request("POST", "/api/account/paypal/disconnect", map[string]any{}, 403)
+	human.csrf = csrf
+	human.request("POST", "/api/account/paypal/disconnect", map[string]any{}, 200)
+	raw = human.request("GET", "/api/account/paypal", nil, 200)
+	if !strings.Contains(string(raw), `"connected":false`) {
+		t.Fatal("disconnect failed")
+	}
+	human.request("POST", "/api/account/paypal/disconnect", map[string]any{}, 200)
 }
 func TestPayPalStatusRequiresUserSessionAndDoesNotInferSharedProvider(t *testing.T) {
 	p := newTestIdentityProvider(t)

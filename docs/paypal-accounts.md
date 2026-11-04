@@ -59,3 +59,41 @@ PayPal account authorization or live invoice read.
 Provider references: [PayPal MCP](https://developer.paypal.com/ai-tools/mcp-server/),
 [Invoicing v2](https://developer.paypal.com/api/invoicing/v2),
 [software seller onboarding](https://developer.paypal.com/platforms/seller-onboarding/build-onboarding).
+
+## Encrypted user grants and disconnect
+
+Set `ARIA_PAYPAL_VAULT_KEYS_FILE` to an operator-owned Secret Manager mount with
+an `active_key` identifier and a `keys` object mapping identifiers to standard
+base64-encoded 32-byte keys. This requires OIDC account mode. Keep this secret
+separate from the record store and browser session signing key. Workers do not
+need access to it. No encryption key or sample credential belongs in GitHub.
+
+The vault encrypts the full user grant and access token with AES-256-GCM. The
+user ID, record version and key identifier are authenticated; records cannot be
+moved between users. Writes use the active key, while retained keys can decrypt
+older records. Coordinate key-ring rollout across replicas before activating a
+new write key, and retain old keys until records are reauthorized or rewritten.
+Unknown keys and damaged records fail closed.
+
+An approved onboarding adapter calls `Vault.Begin` before starting provider
+consent, then verifies the returned merchant identity and actual invoice
+capability on the server before calling `Vault.Complete`. Completion requires
+the unchanged record generation. It cannot overwrite a newer authorization or
+restore a connection revoked while consent was pending. There is no HTTP/MCP
+endpoint to import tokens or assert that a merchant was verified.
+
+`POST /api/account/paypal/disconnect` requires the current user's browser
+session and CSRF confirmation. It accepts an empty object only. It atomically
+replaces encrypted credentials with a fresh revocation tombstone; the next
+read fails. It cannot cancel an already authorized provider call or erase data
+already received by an AI client. It does not change another user's grant or
+revoke the AI client's separate Aria connection. The UI offers this action only
+when a current vault-backed PayPal connection exists.
+
+Disconnecting from Aria is not provider-side revocation. Users must also remove
+the provider consent in PayPal when appropriate. Automatic provider refresh and
+partner consent-revoked webhook handling require the approved onboarding
+adapter and are not configured in this deployment. Expired tokens fail closed
+and require renewed verified authorization; they are never renewed using the
+shared checkout app credentials. Enabling the vault alone does not connect a
+PayPal merchant or grant any data access.

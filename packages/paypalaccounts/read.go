@@ -80,7 +80,7 @@ func (r *Reader) grant(ctx context.Context, user string) (Grant, error) {
 		}
 		return Grant{}, ErrUnavailable
 	}
-	if g.UserID != user || g.MerchantID == "" || g.AccessToken == "" || strings.ContainsAny(g.AccessToken, "\r\n") || g.VerifiedAt.IsZero() || g.VerifiedAt.After(time.Now()) || !g.ExpiresAt.After(time.Now().Add(15*time.Second)) || (g.Environment != "sandbox" && g.Environment != "production") {
+	if !validGrant(user, g, time.Now()) {
 		return Grant{}, ErrNotConnected
 	}
 	return g, nil
@@ -157,4 +157,8 @@ func (r *Reader) Invoices(ctx context.Context, user string, page, size int) (Pag
 		result.Items = []Invoice{}
 	}
 	return Page{Source: "paypal_invoicing_v2", MerchantID: g.MerchantID, Environment: g.Environment, RetrievedAt: time.Now().UTC(), Page: page, PageSize: size, Items: result.Items}, nil
+}
+
+func validGrant(user string, g Grant, now time.Time) bool {
+	return user != "" && g.UserID == user && g.MerchantID != "" && g.AccessToken != "" && !strings.ContainsAny(g.AccessToken, "\r\n") && !g.VerifiedAt.IsZero() && !g.VerifiedAt.After(now) && g.ExpiresAt.After(now.Add(15*time.Second)) && (g.Environment == "sandbox" || g.Environment == "production")
 }

@@ -14,9 +14,10 @@ async function provider(){
  try{
   const status=await api('/api/account/paypal');
   el('provider-state').textContent=status.connected?'Connected':'Not connected';
+  el('disconnect-provider').hidden=!status.connected||!status.can_disconnect;
   el('provider-summary').textContent=status.connected?'PayPal merchant: '+status.merchant_id+' · '+status.environment:'Your PayPal account is not connected.';
   el('provider-detail').textContent=status.connected?'Verified capabilities: '+(status.capabilities.join(', ')||'No business-record reads granted'):'No PayPal account data has been read. Aria sign-in and a client connection do not grant PayPal access.';
- }catch(e){el('provider-state').textContent='Unavailable';el('provider-summary').textContent='Could not verify PayPal authorization.';el('provider-detail').textContent='Previously displayed data is not proof of a current connection.';throw e;}
+ }catch(e){el('disconnect-provider').hidden=true;el('provider-state').textContent='Unavailable';el('provider-summary').textContent='Could not verify PayPal authorization.';el('provider-detail').textContent='Previously displayed data is not proof of a current connection.';throw e;}
 }
 function row(target,entry,manual=false){
  const item=document.createElement('li');item.className='app';const text=document.createElement('span');text.textContent=entry.name||entry.label||'Client';
@@ -35,6 +36,10 @@ async function init(){
   await provider();feedback('Connection settings loaded.');
  }catch(e){feedback(e.message,true);}
 }
+el('disconnect-provider').addEventListener('click',()=>action(el('disconnect-provider'),async()=>{
+ if(!window.confirm('Disconnect this PayPal account from Aria? Aria will discard its stored access credential. To remove PayPal-side consent, also visit your PayPal account settings.'))return;
+ await api('/api/account/paypal/disconnect',{});await provider();feedback('Disconnected from Aria. PayPal-side consent has not been revoked.');
+}));
 el('refresh-provider').addEventListener('click',()=>action(el('refresh-provider'),provider));
 el('sign-out').addEventListener('click',()=>action(el('sign-out'),async()=>{await api('/api/logout',{});location.replace('/');}));
 init();
