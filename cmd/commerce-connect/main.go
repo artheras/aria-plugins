@@ -132,7 +132,7 @@ func openBrowser(target string) error {
 	}
 	return cmd.Start()
 }
-func login(ctx context.Context, path, base string, noBrowser bool) error {
+func login(ctx context.Context, path, base string, noBrowser bool, paypalRead ...bool) error {
 	unlock, e := lock(ctx, path)
 	if e != nil {
 		return e
@@ -167,7 +167,10 @@ func login(ctx context.Context, path, base string, noBrowser bool) error {
 	if e != nil || registered.ID == "" {
 		return errors.New("invalid registration response")
 	}
-	cfg := oauth2.Config{ClientID: registered.ID, RedirectURL: redirect, Scopes: []string{"read", "draft", "offline_access"}, Endpoint: oauth2.Endpoint{AuthURL: base + "/oauth/authorize", TokenURL: base + "/oauth/token", AuthStyle: oauth2.AuthStyleInParams}}
+	cfg := oauth2.Config{ClientID: registered.ID, RedirectURL: redirect, Scopes: []string{"read", "offline_access"}, Endpoint: oauth2.Endpoint{AuthURL: base + "/oauth/authorize", TokenURL: base + "/oauth/token", AuthStyle: oauth2.AuthStyleInParams}}
+	if len(paypalRead) > 0 && paypalRead[0] {
+		cfg.Scopes = append(cfg.Scopes, "paypal.read")
+	}
 	state, proof := oauth2.GenerateVerifier(), oauth2.GenerateVerifier()
 	target := cfg.AuthCodeURL(state, oauth2.S256ChallengeOption(proof), oauth2.SetAuthURLParam("resource", base+"/mcp"))
 	result := make(chan string, 1)
@@ -224,7 +227,7 @@ func serve(ctx context.Context, path, base string) error {
 		return errors.New("cannot list remote tools")
 	}
 	server := mcp.NewServer(&mcp.Implementation{Name: "aria-commerce", Version: "1.0.0"}, nil)
-	allowed := map[string]bool{"commerce_profile": true, "commerce_catalog": true, "commerce_get_order": true, "commerce_draft_order": true}
+	allowed := map[string]bool{"paypal_connection_status": true, "paypal_list_invoices": true, "commerce_profile": true, "commerce_catalog": true, "commerce_get_order": true, "commerce_draft_order": true}
 	for _, tool := range tools.Tools {
 		if !allowed[tool.Name] {
 			continue
@@ -253,6 +256,7 @@ func run(args []string) error {
 		return e
 	}
 	path := flags.String("store", filepath.Join(root, "aria-plugins", "commerce-oauth.json"), "private local credential file")
+	paypalRead := flags.Bool("paypal-read", false, "request separate PayPal invoice read consent; does not connect PayPal by itself")
 	noBrowser := flags.Bool("no-browser", false, "print the authorization URL instead of opening a browser")
 	if e = flags.Parse(args[1:]); e != nil {
 		return e
@@ -269,7 +273,7 @@ func run(args []string) error {
 	case "login":
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
-		return login(ctx, *path, *base, *noBrowser)
+		return login(ctx, *path, *base, *noBrowser, *paypalRead)
 	case "serve":
 		return serve(ctx, *path, *base)
 	case "status":

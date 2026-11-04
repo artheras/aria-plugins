@@ -53,9 +53,11 @@ func (s *Server) mcpUnauthorized(w http.ResponseWriter) {
 }
 
 type mcpArgs struct {
-	Prompt  string           `json:"prompt,omitempty"`
-	Items   *[]sdk.Selection `json:"items,omitempty"`
-	OrderID string           `json:"order_id,omitempty"`
+	Prompt   string           `json:"prompt,omitempty"`
+	Items    *[]sdk.Selection `json:"items,omitempty"`
+	Page     int              `json:"page,omitempty"`
+	PageSize int              `json:"page_size,omitempty"`
+	OrderID  string           `json:"order_id,omitempty"`
 }
 
 func decodeArgs(raw []byte, v any) error {
@@ -88,10 +90,17 @@ func (s *Server) mcpServer(r *http.Request, p accounts.Principal) *mcp.Server {
 	no := false
 	add := func(name, description string, input any, read bool, run func(context.Context, mcpArgs) (any, error)) {
 		scope := "read"
+		if name == "paypal_list_invoices" {
+			scope = "paypal.read"
+		}
 		if !read {
 			scope = "draft"
 		}
 		t := &mcp.Tool{Name: name, Description: description, InputSchema: input, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: read, IdempotentHint: read, DestructiveHint: &no, OpenWorldHint: &no}, Meta: mcp.Meta{"securitySchemes": []any{map[string]any{"type": "oauth2", "scopes": []string{scope}}}}}
+		if name == "paypal_list_invoices" {
+			yes := true
+			t.Annotations.OpenWorldHint = &yes
+		}
 		if name == "commerce_profile" {
 			t.Meta["openai/profile"] = true
 			t.OutputSchema = objectSchema(map[string]any{"id": map[string]any{"type": "string", "minLength": 1}, "nickname": map[string]any{"type": "string"}}, "id")
@@ -105,6 +114,10 @@ func (s *Server) mcpServer(r *http.Request, p accounts.Principal) *mcp.Server {
 				return mcpResult(nil, errors.New("Arguments must be an object.")), nil
 			}
 			allowed := map[string]bool{}
+			if name == "paypal_list_invoices" {
+				allowed["page"] = true
+				allowed["page_size"] = true
+			}
 			if name == "commerce_get_order" {
 				allowed["order_id"] = true
 			}
@@ -138,13 +151,38 @@ func (s *Server) mcpServer(r *http.Request, p accounts.Principal) *mcp.Server {
 		})
 	}
 	empty := objectSchema(map[string]any{})
-	checkEmpty := func(a mcpArgs) bool { return a.Prompt == "" && a.Items == nil && a.OrderID == "" }
+	checkEmpty := func(a mcpArgs) bool {
+		return a.Prompt == "" && a.Items == nil && a.OrderID == "" && a.Page == 0 && a.PageSize == 0
+	}
 	add("commerce_profile", "Return the authenticated profile. Its opaque ID remains stable across reconnections and refresh.", empty, true, func(ctx context.Context, a mcpArgs) (any, error) {
 		if !checkEmpty(a) {
 			return nil, errors.New("This tool accepts no arguments.")
 		}
 		return map[string]string{"id": p.UserID, "nickname": "Aria Commerce · " + p.MerchantID}, nil
 	})
+	add("paypal_connection_status", "Check whether this user has separately authorized a PayPal merchant. An Aria login or checkout provider is not PayPal account authorization. No credentials are returned.", empty, true, func(ctx context.Context, a mcpArgs) (any, error) {
+		if !checkEmpty(a) {
+			return nil, errors.New("This tool accepts no arguments.")
+		}
+		return s.config.PayPalAccounts.Status(ctx, p.UserID)
+	})
+	add("paypal_list_invoices", "Read actual PayPal invoices for this user's independently authorized merchant. Requires explicit paypal.read client consent and provider invoices.read capability. Never returns Aria catalogue or test orders as PayPal data. No write or payment actions.", objectSchema(map[string]any{"page": map[string]any{"type": "integer", "minimum": 1, "maximum": 10000}, "page_size": map[string]any{"type": "integer", "minimum": 1, "maximum": 100}}), true, func(ctx context.Context, a mcpArgs) (any, error) {
+		page, size := a.Page, a.PageSize
+		if page == 0 {
+			page = 1
+		}
+		if size == 0 {
+			size = 20
+		}
+		result, e := s.config.PayPalAccounts.Invoices(ctx, p.UserID, page, size)
+		if e != nil {
+			return nil, paypalReadError(e)
+		}
+		return result, nil
+	})
+	if !s.config.LegacyTools {
+		return server
+	}
 	add("commerce_catalog", "Read trusted catalogue SKUs and integer-cent prices. Use these prices and identifiers for draft proposals.", empty, true, func(ctx context.Context, a mcpArgs) (any, error) {
 		if !checkEmpty(a) {
 			return nil, errors.New("This tool accepts no arguments.")

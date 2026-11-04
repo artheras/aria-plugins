@@ -1,7 +1,7 @@
 {
   "name": "aria-commerce-remote",
-  "version": "0.1.0",
-  "description": "Read products, create unapproved order drafts and track order status through your own Aria Commerce account.",
+  "version": "0.2.0",
+  "description": "Check PayPal account authorization and read invoices only with independent merchant and client consent.",
   "author": {
     "name": "Arthera"
   },

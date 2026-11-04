@@ -20,6 +20,7 @@ import (
 	"github.com/artheras/aria-plugins/packages/agents"
 	merchantidentity "github.com/artheras/aria-plugins/packages/identity"
 	"github.com/artheras/aria-plugins/packages/payments"
+	"github.com/artheras/aria-plugins/packages/paypalaccounts"
 	"github.com/artheras/aria-plugins/packages/products"
 	"github.com/artheras/aria-plugins/packages/sdk"
 	"github.com/artheras/aria-plugins/packages/store"
@@ -30,6 +31,8 @@ import (
 // browser login secret. They must differ so the agent can never mint a human
 // session and approve, capture or refund its own drafts.
 type Config struct {
+	PayPalAccounts                                                                  *paypalaccounts.Reader
+	LegacyTools                                                                     bool
 	Account                                                                         *accounts.Login
 	Mode, PublicURL, SessionSecret, MerchantToken, MerchantLoginToken, DataDir      string
 	MerchantID, LegacyMerchantOwner, CatalogFile                                    string
@@ -52,6 +55,7 @@ func FromEnvironment() (Config, error) { return fromEnvironment(false) }
 func FromEnvironmentForWorker() (Config, error) { return fromEnvironment(true) }
 func fromEnvironment(worker bool) (Config, error) {
 	c := Config{Mode: os.Getenv("ARIA_MODE"), PublicURL: os.Getenv("PUBLIC_URL"), SessionSecret: os.Getenv("ARIA_SESSION_SECRET"), MerchantToken: os.Getenv("ARIA_MERCHANT_TOKEN"), DataDir: os.Getenv("ARIA_DATA_DIR")}
+	c.LegacyTools = os.Getenv("ARIA_COMMERCE_LEGACY_TOOLS") == "1"
 	accountMode := os.Getenv("ARIA_AUTH_MODE")
 	if accountMode != "" && accountMode != "demo" && accountMode != "oidc" {
 		return c, errors.New("ARIA_AUTH_MODE must be demo or oidc")

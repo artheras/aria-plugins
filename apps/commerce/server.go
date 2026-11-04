@@ -69,6 +69,7 @@ func New(c Config) *Server {
 		}
 		write(w, 200, cfg)
 	})
+	s.mux.HandleFunc("GET /api/account/paypal", s.paypalStatus)
 	s.mux.HandleFunc("GET /api/session", s.session)
 	s.mux.HandleFunc("POST /api/login", s.login)
 	s.mux.HandleFunc("GET /api/auth/login", s.authLogin)
@@ -95,7 +96,24 @@ func New(c Config) *Server {
 	s.mux.HandleFunc("POST /api/paypal/webhook", s.webhook)
 	s.mountMCP()
 	assets, _ := fs.Sub(web, "web")
-	s.mux.Handle("GET /", http.FileServer(http.FS(assets)))
+	files := http.FileServer(http.FS(assets))
+	s.mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" && r.URL.Query().Has("order") {
+			if !reviewOrderID.MatchString(r.URL.Query().Get("order")) {
+				fail(w, 400, "Invalid order review link.")
+				return
+			}
+			data, _ := web.ReadFile("web/review.html")
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(data)
+			return
+		}
+		if r.URL.Path == "/index.html" || r.URL.Path == "/review.html" {
+			http.NotFound(w, r)
+			return
+		}
+		files.ServeHTTP(w, r)
+	}))
 	return s
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

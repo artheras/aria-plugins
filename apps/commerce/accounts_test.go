@@ -91,7 +91,7 @@ func accountServer(t *testing.T, p *testIdentityProvider) (*Server, *httptest.Se
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := New(Config{Mode: "demo", PublicURL: web.URL, MerchantID: "shop-one", SessionSecret: strings.Repeat("s", 32), Account: l, Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}, DraftLimit: 100})
+	s := New(Config{LegacyTools: true, Mode: "demo", PublicURL: web.URL, MerchantID: "shop-one", SessionSecret: strings.Repeat("s", 32), Account: l, Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}, DraftLimit: 100})
 	handler = s
 	return s, web, a
 }
