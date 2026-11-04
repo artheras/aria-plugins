@@ -1,135 +1,100 @@
 # Aria Plugins
 
-Portable plugins for **ChatGPT, Codex, Claude and Aria Code**: installable workflows, plugin metadata, and MCP tools. The layout follows the marketplace/package separation used by [Anthropic's official plugins](https://github.com/anthropics/claude-plugins-official).
+Reusable workflows, MCP integrations and client configuration for ChatGPT, Claude, Codex and Aria Code.
 
-**Commerce** provides a remote MCP connection for ChatGPT, Codex, Claude and Aria. Its default tools check separate PayPal authorization and read invoices only through a server-verified user merchant grant. The hosted service currently reports PayPal accounts as **not connected**: independent merchant onboarding is not configured. See [PayPal account access](docs/paypal-accounts.md). Existing exact-order Sandbox review links remain available; legacy remote catalogue/draft tools are opt-in.
+Choose a plugin below, follow its setup guide, and authorize the permissions it needs. Client support depends on the plugin's transport, required service and the host's available features.
 
-**Finance** connects to the independent [Financial Service](https://github.com/artheras/financial-service) for statements, SEC evidence, risk metrics, historical data and simulated backtests. Its financial algorithms live in that service, not this catalogue. See [Finance setup](plugins/finance/README.md).
+## Plugins
 
-## PayPal integration
+| Plugin | Purpose | Connection and clients | Current requirements |
+| --- | --- | --- | --- |
+| [Commerce Remote](plugins/commerce-remote/README.md) | Check account connections and read PayPal invoices with verified permission | Remote MCP with OAuth; ChatGPT, Claude, Codex and the Aria Code Go connector | Hosted Sandbox pilot. Independent PayPal merchant onboarding is not configured; accounts report `not_connected`. |
+| [Commerce Sandbox](plugins/commerce/README.md) | Propose catalogue orders for human review and Sandbox checkout | Local stdio MCP bridge; Codex, Claude Code and Aria Code | Separately configured Commerce service and agent credential. Legacy remote order tools require operator opt-in. |
+| [Finance](plugins/finance/README.md) | Financial statements, disclosure evidence, risk analysis and simulated backtests | Local stdio MCP; Codex, Claude Code and Aria Code | Install the independent [Financial Service](https://github.com/artheras/financial-service). Network data and broker reads require additional configuration. |
+| [Computer Use](plugins/computer-use/README.md) | Operate an isolated browser with approved actions | Local stdio MCP; Codex, Claude Code and Aria Code | An Aria Code build with `aria-computer-use`, Python and Chromium. Browser actions require the macOS approval adapter; Windows/Linux currently expose capability checks only. |
 
-The account reader uses PayPal Invoicing v2 with a separately authorized user merchant. It requires explicit `paypal.read` MCP consent plus verified provider capability. No real account data is returned until both are available; there is no fallback to the test catalogue or the shared checkout app. This adapter is covered by local provider/identity tests, not a live merchant authorization. [Connection and provider requirements](docs/paypal-accounts.md).
+The repository includes plugin metadata, workflow instructions, configuration templates and the Go Commerce backend. Finance algorithms and the Computer Use runtime live in their linked service repositories.
 
-The separate Sandbox order workflow uses Orders v2, signature-verified webhooks and human browser approval. Host AI clients can propose catalogue selections in the opt-in legacy workflow. Approval, checkout, capture and refund are not MCP tools. This test workflow does not establish access to a user's PayPal account.
+## Connect Commerce Remote
 
-## Account access
+Follow the [remote connection guide](plugins/commerce-remote/README.md) for your client:
 
-The optional [account pilot](docs/accounts.md) supports OIDC sign-in, assigned merchant roles and scoped, expiring client connections. The hosted Sandbox uses Google account sign-in with assigned merchant access. PayPal seller consent and multi-merchant onboarding are not implied by an Aria login.
+- **ChatGPT and Claude web/desktop:** add the remote MCP service through the host's custom connection settings, where supported.
+- **Codex and Claude Code:** register the remote MCP URL and complete browser OAuth.
+- **Aria Code:** build the Go connector, run its browser login, and add its stdio configuration.
 
-## Remote account connection
+The hosted pilot uses Google sign-in and assigned merchant access. A custom connection is separate from a public directory listing; public distribution requires the host platform's review.
 
-[Connect the remote plugin](plugins/commerce-remote/README.md) with OAuth: Google sign-in, explicit permission review, rotating renewal credentials and per-app revocation. ChatGPT and Claude use the remote MCP URL; Aria Code uses the included Go connector. Four remote tools provide profile, catalogue, drafts and order status. Public directory publication requires platform review.
+The default remote tools are:
 
-## Connect Codex or Claude Code
+| Tool | Purpose |
+| --- | --- |
+| `commerce_profile` | Read the current Aria account and assigned merchant context |
+| `paypal_connection_status` | Check the separate PayPal merchant authorization state |
+| `paypal_list_invoices` | Read invoices when both client and provider permissions are verified |
 
-Use the [cross-client setup](docs/clients.md) for native Codex TOML, Claude Code MCP JSON, and host-model drafting. The same three MCP tools serve all clients; human approval and payments stay in the browser.
+Start by asking: **“Check my PayPal connection status.”**
 
-## Connect to Aria Code
+Invoice reads require explicit `paypal.read` client consent and a verified, user-bound PayPal merchant grant with invoice-read capability. Existing connections do not gain this permission automatically.
 
-Inside a current Aria Code session:
+**Current status:** the invoice reader and encrypted grant vault are implemented and tested locally. The hosted service has no independent PayPal onboarding adapter or configured grant vault, so real user merchant authorization and invoice reads remain unverified. See [PayPal account access](docs/paypal-accounts.md) for configuration and limits.
+
+## Install workflows and local services
+
+Workflow installation, MCP registration and account authorization are separate steps.
+
+For Aria Code workflows:
 
 ```text
 /skills add artheras/aria-plugins
 /skills doctor
 ```
 
-Then request, for example:
+This installs workflow instructions; it does not start a service, register every MCP server or authorize an account. Use each plugin's setup guide for its runtime and configuration.
 
-```text
-$commerce:commerce Draft an order for 2 tees and 1 mug.
-```
-
-The current Aria installer discovers root `skills/*/SKILL.md`, reads `.claude-plugin/marketplace.json`, and verifies `skills.lock.json`. The directory name is required by the existing Aria loader; it is a compatibility format.
-
-**One command** installs the verified Commerce MCP tools and registers them with Aria Code (macOS and Linux; no Go needed):
+For the separate **Commerce Sandbox stdio bridge**, the macOS/Linux installer downloads a release bundle, checks its published SHA256 checksum and registers the bridge with Aria Code:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/artheras/aria-plugins/main/install.sh | sh
 ```
 
-It checks the download against the release `SHA256SUMS`, backs up an existing `mcp_servers.json`, keeps your other servers, and runs `doctor`. Windows: use the zip from the releases page and [the bundle guide](docs/bundle-readme.md).
+This installer targets the Sandbox order workflow. It does not configure Commerce Remote OAuth, install Finance or Computer Use dependencies, or connect a user's PayPal account. Windows users can use the release ZIP and [bundle guide](docs/bundle-readme.md).
 
-Skill installation alone does not register commands/MCP or build binaries. Configure and run the Go bridge using the [Aria Code connection guide](docs/aria-code.md). A full plugin manager that installs every component together belongs in the Aria Code host.
+See the [Sandbox cross-client guide](docs/clients.md) for Codex and Claude Code, or the [Sandbox Aria Code guide](docs/aria-code.md) for manual setup.
 
-## Catalogue layout
+## Account permissions
 
-```text
-.claude-plugin/
-  marketplace.json          # Plugin catalogue read by Aria Code
-  skills.lock.json          # Generated Aria skill integrity hashes
-plugins/
-  commerce/
-    .aria-plugin/plugin.json
-    .claude-plugin/plugin.json
-    skills/commerce/         # Canonical workflow and policy
-    commands/commerce.md
-    mcp.json                # Aria configuration template
-    .mcp.json               # Claude-format MCP configuration
-    README.md
-skills/commerce/             # Generated mirror for the current Aria installer
-packages/                   # Reusable Go libraries and catalogue validator
-cmd/                        # Go service, MCP bridge and catalogue tooling
-apps/commerce/              # Browser example
-```
+Aria sign-in identifies the user. Client OAuth grants access to selected Aria tools. PayPal merchant consent separately authorizes supported provider data. All required permissions must be present before an invoice read succeeds; shared Sandbox checkout credentials cannot substitute for a user grant.
 
-Edit skills inside their plugin, then run `make catalog-sync`. Commit the generated mirror and lock together. `make catalog-check` and CI reject changed hashes, stale mirrors, invalid paths, and inconsistent plugin versions. See [CONTRIBUTING.md](CONTRIBUTING.md) to add another plugin. Only implemented plugins are listed.
+The account reader returns a limited invoice summary. It does not provide general access to balances, all transactions or arbitrary PayPal account management. No remote MCP tools approve orders, initiate checkout, capture payments or issue refunds.
 
-## Develop the service
+The separate Sandbox order workflow uses browser review bound to the exact order. Its fixed USD catalogue and assigned merchant setup are test-workflow limits. Existing order review links remain available. Catalogue and draft tools are excluded from the default remote tool list.
 
-Users connect from their AI client's plugin settings; they do not need a local
-storefront or a local browser demo. Follow the [remote plugin setup](plugins/commerce-remote/README.md).
-Developers can build and test the Go backend with `make build` and `make test`.
-The review console is for account permissions and exact-order approvals only.
+Where configured, users can revoke client connections and disconnect a stored PayPal grant from Aria. Local disconnection does not revoke PayPal-side consent. Read [account access](docs/accounts.md) and [PayPal grant storage and revocation](docs/paypal-accounts.md) before deploying.
 
-## Repository
+## Development
 
-| Path | Role |
-| --- | --- |
-| apps/commerce | HTTP workflow, OAuth and account/order review console |
-| cmd/server | Go service entrypoint |
-| cmd/commerce-worker | Bounded recovery job for persisted payment intents |
-| packages/commerce | Transport-independent order workflow and recovery |
-| packages/limits | Shared atomic request quotas |
-| cmd/commerce-mcp | Go MCP stdio adapter: catalogue, draft, status |
-| packages/sdk | Shared invoice, catalogue, payment, and audit contracts |
-| packages/agents | Demo parser and AI Gateway HTTP adapter |
-| packages/approvals | Exact-invoice approval digest and expiry |
-| packages/payments | Provider interface, demo provider, PayPal Sandbox implementation |
-| packages/store | Atomic file, Redis REST and Firestore compare-and-swap |
-| plugins/commerce | Installable workflow, host manifests and MCP configuration |
-| skills / .claude-plugin | Aria-compatible catalogue discovery and integrity |
-| packages/catalog / cmd/catalog | Go catalogue validation and mirror generation |
-| examples | Aria MCP configuration |
-| docs | Setup, architecture, validation, and submission draft |
-
-Plugin names such as `commerce` are stable identifiers; change `displayName` for branding. New Go or Rust tools can implement the same MCP contracts without changing the catalogue's workflow format.
-
-## Configure and validate
-
-- [Google Cloud Run service and recovery job](docs/cloud-run.md)
-- [Setup: PayPal, AI Gateway, MCP, Docker, Vercel](docs/setup.md)
-- [Commerce quickstart](docs/quickstart.md)
-- [Connect to Aria Code](docs/aria-code.md)
-- [Architecture and HTTP contract](docs/architecture.md)
-- [Validation and remaining live checks](docs/testing.md)
+The Commerce backend and connector use Go. From a source checkout with the toolchain declared in [go.mod](go.mod):
 
 ```sh
+make build
 make test
 ```
 
-This starter supports one merchant and a fixed USD catalogue. Approval, checkout, and capture require a browser session and are not exposed to MCP. Local file storage supports one server process; serverless or multiple instances must use Firestore or Redis. Cloud Run defaults to Firestore. Licensed under the [Apache License 2.0](LICENSE).
+`make test` runs Go race tests, vet and catalogue validation. Local mock-provider tests do not establish successful live PayPal authorization or payment processing.
 
-**Verification limits:** the credential-free demo and mock providers are tested locally. Real AI Gateway calls, PayPal Sandbox transactions, webhook delivery, a full interactive Aria/Claude agent session, and full provider failure recovery still require configuration and live validation. The separately deployed public Demo is simulated; its deployed image/version is recorded independently. The Aria Code marketing site is a separate project.
+Edit canonical workflows inside `plugins/<name>/skills/`, then run `make catalog-sync`. Commit the generated root skill mirrors and integrity lock together.
 
+| Path | Contents |
+| --- | --- |
+| `plugins/` | Workflow packages, host manifests and MCP configuration templates |
+| `skills/` and `.claude-plugin/` | Aria-compatible discovery, generated mirrors and integrity hashes |
+| `apps/commerce/` | HTTP service, OAuth and account/order review UI |
+| `cmd/` | Service, connector, local MCP bridge and administration commands |
+| `packages/` | Commerce, PayPal account access, storage and shared Go libraries |
+| `contracts/` | HTTP/OpenAPI and plugin package schemas |
+| `docs/` | Setup, architecture, operations and validation guides |
 
-## Commerce 0.4.0
+Further reading: [Cloud Run deployment](docs/cloud-run.md), [HTTP architecture](docs/architecture.md), [operations](docs/operations.md), [validation](docs/testing.md), and [contributing](CONTRIBUTING.md).
 
-Stable merchant identity, owner-scoped history/search, trusted product management, invoice revision with renewed approval, unstarted-order cancellation/expiry, manual recovery review and verified full refunds are implemented. Monetary actions remain in the browser. Unknown refunds are inspected, never automatically repeated.
-
-- [Versioned tool installation and MCP configuration](docs/bundle-readme.md)
-- [Stable ownership and credential migration](docs/identity-migration.md)
-- [HTTP/OpenAPI contract](contracts/commerce.openapi.json) and [plugin package schema](contracts/plugin-package.schema.json)
-- [Real AI/PayPal Sandbox validation](docs/sandbox-validation.md)
-- [Monitoring, backups and operational limits](docs/operations.md)
-
-Release CI publishes six macOS/Linux/Windows platform bundles and `SHA256SUMS` when the source version changes on main. `make release` builds the same bundles locally. Only Commerce is currently an installable plugin; agents, approvals and payments are reusable libraries.
+Licensed under [Apache License 2.0](LICENSE).
