@@ -1,7 +1,7 @@
 {
   "$schema": "../../contracts/plugin-package.schema.json",
   "name": "commerce",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "contract_version": "1",
   "minimum_aria_version": "0.140.0",
   "mcp_protocol_version": "2024-11-05",

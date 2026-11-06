@@ -1,3 +1,7 @@
+## 0.6.1
+
+Healthcare plugin and portable bundle support; Finance tool declarations synchronized with its service.
+
 # Changelog
 
 ## Unreleased
