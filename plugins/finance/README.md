@@ -44,7 +44,7 @@ Codex can use the MCP tools directly, or install this skill folder in its skill
 directory. codex.toml and .mcp.json show the same server in host-specific formats.
 No financial calculations are duplicated in these wrappers.
 
-The service exposes ten tools listed in package.json. Networking defaults to off
+The service exposes the 36 read-only tools listed in package.json. Networking defaults to off
 in the service itself; the templates (mcp.json, .mcp.json, codex.toml) do not set
 it, so the host environment decides. Supplied-data calculations work without
 market credentials. To allow market data and SEC reads, set
@@ -54,8 +54,14 @@ Code); SEC reads additionally need EDGAR_USER_AGENT. Do not add it to the MCP
 entry's env block unless you want to pin it for that host: a configured env value
 overrides the host environment.
 
-Activating $finance:finance narrows the model to these ten tools (allowed_tools in
+Activating $finance:finance narrows the model to these declared tools (allowed_tools in
 skill-policy.json) plus Aria's core file tools. These are read-only data/analysis
 tools and simulated backtests, with no trading or publication capability. MCP validation failures are reported as errors.
 
 Broker account reads use per-user Financial Service profiles. Configure FINANCIAL_SERVICE_HOME and set FINANCIAL_SERVICE_BROKERS_ENABLED=1 in the host environment; real (non-paper) connections also need FINANCIAL_SERVICE_NETWORK=1 there. Follow the service's broker connection guide. The catalogue does not collect broker credentials, run an OAuth callback, or authorize trading.
+
+Web, desktop and iOS consume the hosted service through the authenticated private
+Arthera backend. The host installs a pinned service runtime, and each account
+opts in after an MCP probe. Hosted mode always disables broker accounts and
+trading; the broker instructions above apply only to separately configured
+local user installations.

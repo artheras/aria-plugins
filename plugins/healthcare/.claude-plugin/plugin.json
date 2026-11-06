@@ -1,0 +1,10 @@
+{
+  "name": "healthcare",
+  "version": "0.1.0",
+  "description": "Public biomedical literature, versioned research tasks and traceable evidence bundles through Aria Healthcare Service.",
+  "author": {
+    "name": "Arthera"
+  },
+  "repository": "https://github.com/artheras/healthcare-service",
+  "license": "Apache-2.0"
+}

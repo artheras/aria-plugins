@@ -1,0 +1,42 @@
+{
+  "$schema": "../../contracts/plugin-package.schema.json",
+  "name": "healthcare",
+  "version": "0.1.0",
+  "contract_version": "1",
+  "minimum_aria_version": "0.165.0",
+  "mcp_protocol_version": "2024-11-05",
+  "tools": [
+    "health_attach_bundle",
+    "health_audit_bundle",
+    "health_capabilities",
+    "health_create_bundle",
+    "health_create_navigation_policy",
+    "health_create_task",
+    "health_doctor",
+    "health_evaluate_navigation",
+    "health_export_bundle",
+    "health_fetch_article",
+    "health_get_task",
+    "health_list_records",
+    "health_navigation_review_packet",
+    "health_request_review",
+    "health_screen_article",
+    "health_search_pubmed",
+    "health_simulate_navigation",
+    "health_update_task"
+  ],
+  "permissions": [
+    "read_public_literature",
+    "write_research_workspace"
+  ],
+  "required_env": [],
+  "optional_env": [
+    "ARIA_HEALTH_ALLOW_NETWORK",
+    "NCBI_CONTACT_EMAIL"
+  ],
+  "human_only_actions": [
+    "enable_network",
+    "review_research",
+    "approve_clinical_use"
+  ]
+}

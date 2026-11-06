@@ -1,0 +1,18 @@
+{
+  "name": "healthcare",
+  "displayName": "Aria Healthcare",
+  "version": "0.1.0",
+  "description": "Public biomedical literature, versioned research tasks and traceable evidence bundles through Aria Healthcare Service.",
+  "capabilities": [
+    "commands",
+    "skills"
+  ],
+  "permissions": [
+    "read_public_literature",
+    "write_research_workspace"
+  ],
+  "entrypoints": {
+    "commands": "commands/",
+    "skills": "skills/"
+  }
+}

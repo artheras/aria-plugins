@@ -1,0 +1,32 @@
+{
+  "schema_version": "aria.skill-policy.v1",
+  "allowed_tools": [
+    "health_attach_bundle",
+    "health_audit_bundle",
+    "health_capabilities",
+    "health_create_bundle",
+    "health_create_navigation_policy",
+    "health_create_task",
+    "health_doctor",
+    "health_evaluate_navigation",
+    "health_export_bundle",
+    "health_fetch_article",
+    "health_get_task",
+    "health_list_records",
+    "health_navigation_review_packet",
+    "health_request_review",
+    "health_screen_article",
+    "health_search_pubmed",
+    "health_simulate_navigation",
+    "health_update_task"
+  ],
+  "permissions": [
+    "read_public_literature",
+    "write_research_workspace"
+  ],
+  "scripts": {
+    "execution": "approval",
+    "network": false,
+    "workspace_write": false
+  }
+}

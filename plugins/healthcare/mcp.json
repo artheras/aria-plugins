@@ -1,0 +1,17 @@
+{
+  "servers": [
+    {
+      "name": "aria-healthcare",
+      "command": "/ABSOLUTE/PATH/TO/VENV/bin/python",
+      "args": [
+        "-I",
+        "-m",
+        "aria_healthcare.server",
+        "--workspace",
+        "/ABSOLUTE/PATH/TO/PRIVATE/RESEARCH-WORKSPACE"
+      ],
+      "enabled": true,
+      "description": "Public biomedical literature, versioned research tasks and traceable evidence bundles through Aria Healthcare Service."
+    }
+  ]
+}

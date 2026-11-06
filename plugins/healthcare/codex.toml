@@ -1,0 +1,3 @@
+[mcp_servers.aria-healthcare]
+command = "/ABSOLUTE/PATH/TO/VENV/bin/python"
+args = ["-I", "-m", "aria_healthcare.server", "--workspace", "/ABSOLUTE/PATH/TO/PRIVATE/RESEARCH-WORKSPACE"]

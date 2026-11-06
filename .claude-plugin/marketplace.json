@@ -39,6 +39,16 @@
       "skills": [
         "./skills/computer-use"
       ]
+    },
+    {
+      "name": "healthcare",
+      "source": "./plugins/healthcare",
+      "version": "0.1.0",
+      "description": "Public biomedical literature, versioned research tasks and traceable evidence bundles through Aria Healthcare Service.",
+      "repository": "https://github.com/artheras/healthcare-service",
+      "skills": [
+        "./skills/healthcare"
+      ]
     }
   ]
 }

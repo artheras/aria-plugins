@@ -8,7 +8,10 @@
       "sha256": "e4213d5389f5c12ada42ec61ecec54fca5da3a7ba874e1cdcfa55d96b30e09b7"
     },
     "finance:finance": {
-      "sha256": "005787afe67eb23d3bae4b4b5851bd632dabaa0192009edef33acc6331aea8c4"
+      "sha256": "fa74879bf687daad5c2dceb93d1aafb751e197b16263286f1bd1eeb5dd71d5c8"
+    },
+    "healthcare:healthcare": {
+      "sha256": "dbbd1a674507f200c4861243e7241ce51134953b977426208c4b55b7ea0a9433"
     }
   }
 }
