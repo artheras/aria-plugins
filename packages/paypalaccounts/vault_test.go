@@ -34,11 +34,12 @@ func TestEncryptedGrantRoundTripRotationAndNoPlaintext(t *testing.T) {
 	}
 	g := grant(user)
 	g.AccessToken = "private-paypal-access-token"
+	g.RefreshToken = "private-paypal-refresh-token"
 	if e = v.Complete(ctx, user, before, g); e != nil {
 		t.Fatal(e)
 	}
 	raw, _ := storage.Get(ctx, grantKey(user))
-	if strings.Contains(string(raw), g.AccessToken) || strings.Contains(string(raw), g.MerchantID) || strings.Contains(string(raw), user) {
+	if strings.Contains(string(raw), g.AccessToken) || strings.Contains(string(raw), g.RefreshToken) || strings.Contains(string(raw), g.MerchantID) || strings.Contains(string(raw), user) {
 		t.Fatal("plaintext credential or account metadata persisted")
 	}
 	v, e = NewVault(storage, "second", map[string][]byte{"first": []byte(strings.Repeat("k", 32)), "second": []byte(strings.Repeat("z", 32))})
@@ -46,7 +47,7 @@ func TestEncryptedGrantRoundTripRotationAndNoPlaintext(t *testing.T) {
 		t.Fatal(e)
 	}
 	restored, e := v.Resolve(ctx, user)
-	if e != nil || restored.AccessToken != g.AccessToken || restored.UserID != user {
+	if e != nil || restored.AccessToken != g.AccessToken || restored.RefreshToken != g.RefreshToken || restored.UserID != user {
 		t.Fatal("restart/rotation read failed", e)
 	}
 	before, _ = v.Begin(ctx, user)

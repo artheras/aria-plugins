@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/artheras/aria-plugins/packages/agents"
 	"github.com/artheras/aria-plugins/packages/mcpauth"
 	"github.com/artheras/aria-plugins/packages/sdk"
+	"github.com/artheras/aria-plugins/packages/store"
 )
 
 //go:embed web/*
@@ -311,15 +313,30 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, 200, result)
 }
+func clientPeer(r *http.Request) string {
+	if os.Getenv("K_SERVICE") != "" || os.Getenv("VERCEL") != "" {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			parts := strings.Split(xff, ",")
+			for i := len(parts) - 1; i >= 0; i-- {
+				if ip := net.ParseIP(strings.TrimSpace(parts[i])); ip != nil {
+					return ip.String()
+				}
+			}
+		}
+	}
+	peer, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return peer
+}
+
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if s.config.Account != nil {
 		fail(w, 403, "Use account sign-in; demo credentials are disabled.")
 		return
 	}
-	peer, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		peer = r.RemoteAddr
-	}
+	peer := clientPeer(r)
 	if !s.quota(w, r, "login", peer, s.config.loginLimit(), time.Minute) {
 		return
 	}
@@ -502,8 +519,7 @@ func (s *Server) quota(w http.ResponseWriter, r *http.Request, scope, subject st
 func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
-	_, err := s.limiter.Take(ctx, "readiness", "probe", 1_000_000, time.Minute)
-	if err != nil {
+	if _, err := s.config.Store.Get(ctx, "meta_catalog"); err != nil && !errors.Is(err, store.ErrNotFound) {
 		fail(w, 503, "Storage is not ready.")
 		return
 	}

@@ -188,3 +188,17 @@ func TestServiceDraftValidatesPromptBeforeProvider(t *testing.T) {
 		t.Fatal("oversized input accepted", err)
 	}
 }
+
+func TestRecoverSkipsNonOrderKeys(t *testing.T) {
+	s, _, _, _, _ := fixture(t)
+	ctx := context.Background()
+	for _, key := range []string{"meta_catalog", "meta_oidc_abc", "paypal_grant_v1_0123456789abcdef"} {
+		if err := s.Store.CAS(ctx, key, nil, []byte(`{"not":"an_order"}`)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	next, recovered, pending, err := s.Recover(ctx, "", 100)
+	if err != nil || next != "" || recovered != 0 || pending != 0 {
+		t.Fatalf("unexpected recover result: next=%q recovered=%d pending=%d err=%v", next, recovered, pending, err)
+	}
+}

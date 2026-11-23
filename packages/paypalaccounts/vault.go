@@ -38,8 +38,9 @@ type envelope struct {
 	Generation string `json:"generation,omitempty"`
 }
 type storedGrant struct {
-	Grant Grant  `json:"grant"`
-	Token string `json:"access_token"`
+	Grant        Grant  `json:"grant"`
+	Token        string `json:"access_token"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
 // LoadVault decodes an operator-owned secret key ring; never accept this JSON
@@ -125,7 +126,7 @@ func (v *Vault) Begin(ctx context.Context, user string) (string, error) {
 	return revision(raw), nil
 }
 func (v *Vault) Complete(ctx context.Context, user, expected string, g Grant) error {
-	if !validGrant(user, g, time.Now()) || len(g.AccessToken) > 32<<10 || len(g.Capabilities) > 16 {
+	if !validGrant(user, g, time.Now()) || len(g.AccessToken) > 32<<10 || len(g.RefreshToken) > 32<<10 || len(g.Capabilities) > 16 {
 		return ErrNotConnected
 	}
 	raw, e := v.current(ctx, user)
@@ -135,7 +136,7 @@ func (v *Vault) Complete(ctx context.Context, user, expected string, g Grant) er
 	if expected == "" || revision(raw) != expected {
 		return ErrGrantChanged
 	}
-	body, e := json.Marshal(storedGrant{Grant: g, Token: g.AccessToken})
+	body, e := json.Marshal(storedGrant{Grant: g, Token: g.AccessToken, RefreshToken: g.RefreshToken})
 	if e != nil {
 		return ErrUnavailable
 	}
@@ -192,6 +193,7 @@ func (v *Vault) Resolve(ctx context.Context, user string) (Grant, error) {
 		return Grant{}, ErrUnavailable
 	}
 	saved.Grant.AccessToken = saved.Token
+	saved.Grant.RefreshToken = saved.RefreshToken
 	if !validGrant(user, saved.Grant, time.Now()) {
 		return Grant{}, ErrNotConnected
 	}

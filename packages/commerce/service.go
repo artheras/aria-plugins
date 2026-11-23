@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/artheras/aria-plugins/packages/agents"
@@ -378,7 +377,7 @@ func (s *Service) Recover(ctx context.Context, cursor string, limit int) (string
 	}
 	recovered, pending := 0, 0
 	for _, key := range keys {
-		if strings.HasPrefix(key, "meta_") {
+		if !orderKey.MatchString(key) {
 			continue
 		}
 		if ctx.Err() != nil {

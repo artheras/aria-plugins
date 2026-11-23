@@ -32,6 +32,7 @@ type GrantSource interface {
 type Grant struct {
 	UserID, MerchantID, Environment string
 	AccessToken                     string `json:"-"`
+	RefreshToken                    string `json:"-"`
 	Capabilities                    []string
 	VerifiedAt, ExpiresAt           time.Time
 }

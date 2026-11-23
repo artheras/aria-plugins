@@ -163,3 +163,23 @@ func TestVerifiedWebhookReconcilesOnce(t *testing.T) {
 		t.Fatal("webhook replay duplicated audit", stored)
 	}
 }
+
+func TestClientPeerAndReadiness(t *testing.T) {
+	r := httptest.NewRequest("POST", "/api/login", nil)
+	r.RemoteAddr = "10.0.0.1:4321"
+	r.Header.Set("X-Forwarded-For", "198.51.100.1, 203.0.113.5")
+	if got := clientPeer(r); got != "10.0.0.1" {
+		t.Fatalf("unexpected direct peer: %s", got)
+	}
+	t.Setenv("K_SERVICE", "aria-commerce")
+	if got := clientPeer(r); got != "203.0.113.5" {
+		t.Fatalf("unexpected proxied peer: %s", got)
+	}
+	storage, _ := store.NewFile(t.TempDir())
+	s := New(Config{Mode: "demo", PublicURL: "https://merchant.test", SessionSecret: strings.Repeat("s", 32), Store: storage, Drafter: agents.Demo{}, Payments: payments.Demo{}})
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, httptest.NewRequest("GET", "/api/ready", nil))
+	if w.Code != 200 {
+		t.Fatalf("expected 200 ready, got %d: %s", w.Code, w.Body.String())
+	}
+}

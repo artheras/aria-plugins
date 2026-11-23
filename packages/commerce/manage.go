@@ -75,7 +75,8 @@ func (s *Service) List(ctx context.Context, a Actor, options ListOptions) (Order
 			if err != nil {
 				return page, StorageError(err)
 			}
-			if len(keys) > 100 {
+			// Redis SCAN COUNT is a hint and may return more than 100 keys in one batch.
+			if len(keys) > 500 {
 				return page, problem("scan_limit", "Storage returned an oversized page.", 503, false)
 			}
 			position.Pending = keys
