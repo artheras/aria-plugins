@@ -154,3 +154,39 @@ func TestVaultRejectsInvalidSecretAndUnverifiedGrant(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestVaultRefreshesExpiredGrantAndRespectsDisconnect(t *testing.T) {
+	ctx := context.Background()
+	user := strings.Repeat("c", 64)
+	v, _ := vaultFor(t)
+	now := time.Now().UTC()
+	v.now = func() time.Time { return now }
+	before, _ := v.Begin(ctx, user)
+	g := grant(user)
+	g.VerifiedAt = now.Add(-time.Minute)
+	g.ExpiresAt = now.Add(time.Minute)
+	g.RefreshToken = "refresh-token-1"
+	if e := v.Complete(ctx, user, before, g); e != nil {
+		t.Fatal(e)
+	}
+	now = now.Add(2 * time.Minute)
+	if _, e := v.Resolve(ctx, user); !errors.Is(e, ErrNotConnected) {
+		t.Fatalf("expired grant resolved without refresher: %v", e)
+	}
+	v.Refresher = func(_ context.Context, cur Grant) (Grant, error) {
+		cur.AccessToken = "refreshed-access-token"
+		cur.RefreshToken = "refresh-token-2"
+		cur.ExpiresAt = now.Add(10 * time.Minute)
+		return cur, nil
+	}
+	got, e := v.Resolve(ctx, user)
+	if e != nil || got.AccessToken != "refreshed-access-token" || got.RefreshToken != "refresh-token-2" {
+		t.Fatalf("refresh failed: %+v err=%v", got, e)
+	}
+	if e := v.Disconnect(ctx, user); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := v.Resolve(ctx, user); !errors.Is(e, ErrNotConnected) {
+		t.Fatalf("disconnected grant resurrected: %v", e)
+	}
+}

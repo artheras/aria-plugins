@@ -110,7 +110,8 @@ func (s *Server) authCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Consume the browser-bound state before code exchange, across all replicas.
-	if s.config.Store.CAS(r.Context(), "meta_oidc_"+s.sign(a.State), nil, []byte(`{"used":true}`)) != nil {
+	oidcUsed, _ := json.Marshal(map[string]any{"used": true, "expires_at": a.Expires})
+	if s.config.Store.CAS(r.Context(), "meta_oidc_"+s.sign(a.State), nil, oidcUsed) != nil {
 		deny()
 		return
 	}

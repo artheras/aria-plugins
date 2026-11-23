@@ -25,10 +25,20 @@ var keyName = regexp.MustCompile(`^[A-Za-z0-9_-]{1,32}$`)
 // Vault stores only encrypted, independently verified merchant grants. It has
 // no public token-import API. Only an approved onboarding adapter may write it.
 type Vault struct {
-	storage store.Store
-	active  string
-	keys    map[string]cipher.AEAD
+	storage   store.Store
+	active    string
+	keys      map[string]cipher.AEAD
+	Refresher func(context.Context, Grant) (Grant, error)
+	now       func() time.Time
 }
+
+func (v *Vault) clock() time.Time {
+	if v != nil && v.now != nil {
+		return v.now()
+	}
+	return time.Now()
+}
+
 type envelope struct {
 	Version    int    `json:"version"`
 	KeyID      string `json:"key_id,omitempty"`
@@ -126,7 +136,7 @@ func (v *Vault) Begin(ctx context.Context, user string) (string, error) {
 	return revision(raw), nil
 }
 func (v *Vault) Complete(ctx context.Context, user, expected string, g Grant) error {
-	if !validGrant(user, g, time.Now()) || len(g.AccessToken) > 32<<10 || len(g.RefreshToken) > 32<<10 || len(g.Capabilities) > 16 {
+	if !validGrant(user, g, v.clock()) || len(g.AccessToken) > 32<<10 || len(g.RefreshToken) > 32<<10 || len(g.Capabilities) > 16 {
 		return ErrNotConnected
 	}
 	raw, e := v.current(ctx, user)
@@ -157,47 +167,89 @@ func (v *Vault) Complete(ctx context.Context, user, expected string, g Grant) er
 	}
 	return nil
 }
-func (v *Vault) Resolve(ctx context.Context, user string) (Grant, error) {
+func (v *Vault) decrypt(ctx context.Context, user string) (Grant, []byte, error) {
 	raw, e := v.current(ctx, user)
 	if e != nil {
-		return Grant{}, e
+		return Grant{}, nil, e
 	}
 	if len(raw) == 0 {
-		return Grant{}, ErrNotConnected
+		return Grant{}, nil, ErrNotConnected
 	}
 	var env envelope
 	if json.Unmarshal(raw, &env) != nil || env.Version != 1 {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	if env.Revoked {
-		return Grant{}, ErrNotConnected
+		return Grant{}, nil, ErrNotConnected
 	}
 	a := v.keys[env.KeyID]
 	if a == nil {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	nonce, e := base64.RawStdEncoding.DecodeString(env.Nonce)
 	if e != nil || len(nonce) != a.NonceSize() {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	body, e := base64.RawStdEncoding.DecodeString(env.Ciphertext)
 	if e != nil {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	clear, e := a.Open(nil, nonce, body, []byte("paypal-grant-v1\x00"+user+"\x00"+env.KeyID))
 	if e != nil {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	var saved storedGrant
 	if json.Unmarshal(clear, &saved) != nil {
-		return Grant{}, ErrUnavailable
+		return Grant{}, nil, ErrUnavailable
 	}
 	saved.Grant.AccessToken = saved.Token
 	saved.Grant.RefreshToken = saved.RefreshToken
-	if !validGrant(user, saved.Grant, time.Now()) {
+	return saved.Grant, raw, nil
+}
+
+func (v *Vault) Resolve(ctx context.Context, user string) (Grant, error) {
+	g, _, e := v.decrypt(ctx, user)
+	if e != nil {
+		return Grant{}, e
+	}
+	if validGrant(user, g, v.clock()) {
+		return g, nil
+	}
+	if v.Refresher != nil && g.RefreshToken != "" {
+		return v.Refresh(ctx, user, v.Refresher)
+	}
+	return Grant{}, ErrNotConnected
+}
+
+// Refresh exchanges an expired grant's refresh token for a fresh access token
+// while preserving the verified user, merchant, environment, and capabilities
+// and enforcing CAS generation checks against concurrent Disconnect calls.
+func (v *Vault) Refresh(ctx context.Context, user string, fn func(context.Context, Grant) (Grant, error)) (Grant, error) {
+	if fn == nil {
 		return Grant{}, ErrNotConnected
 	}
-	return saved.Grant, nil
+	g, raw, e := v.decrypt(ctx, user)
+	if e != nil {
+		return Grant{}, e
+	}
+	if g.RefreshToken == "" || g.UserID != user || g.MerchantID == "" || g.VerifiedAt.IsZero() {
+		return Grant{}, ErrNotConnected
+	}
+	next, e := fn(ctx, g)
+	if e != nil {
+		return Grant{}, e
+	}
+	if next.UserID != g.UserID || next.MerchantID != g.MerchantID || next.Environment != g.Environment || !next.VerifiedAt.Equal(g.VerifiedAt) {
+		return Grant{}, ErrGrantChanged
+	}
+	next.Capabilities = append([]string(nil), g.Capabilities...)
+	if next.RefreshToken == "" {
+		next.RefreshToken = g.RefreshToken
+	}
+	if e = v.Complete(ctx, user, revision(raw), next); e != nil {
+		return Grant{}, e
+	}
+	return next, nil
 }
 
 // Disconnect atomically removes stored credential material and leaves a
