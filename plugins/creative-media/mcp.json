@@ -1,0 +1,17 @@
+{
+  "servers": [
+    {
+      "name": "aria-creative-media",
+      "command": "python3",
+      "args": [
+        "-m",
+        "aria_creative.mcp_server"
+      ],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/aria-plugins/plugins/creative-media/python"
+      },
+      "description": "Figma, Canva, OpenAI Images, Kling, and Runway creative MCP tools",
+      "enabled": true
+    }
+  ]
+}
