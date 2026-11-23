@@ -9,3 +9,6 @@
 coverage.out
 
 dist/
+
+__pycache__/
+*.pyc
