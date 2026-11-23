@@ -70,9 +70,6 @@ func TestInstallChecksumAndPathBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(i.Directory, "skills", "computer-use", "SKILL.md")); err != nil {
-		t.Fatal("computer-use workflow missing from installed multi-plugin catalogue", err)
-	}
 	if _, err := os.Stat(filepath.Join(i.Directory, "skills", "healthcare", "SKILL.md")); err != nil {
 		t.Fatal("healthcare workflow missing from installed catalogue", err)
 	}

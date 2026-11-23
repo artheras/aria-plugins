@@ -11,9 +11,8 @@ Choose a plugin below, follow its setup guide, and authorize the permissions it 
 | [Commerce Remote](plugins/commerce-remote/README.md) | Check account connections and read PayPal invoices with verified permission | Remote MCP with OAuth; ChatGPT, Claude, Codex and the Aria Code Go connector | Hosted Sandbox pilot. Independent PayPal merchant onboarding is not configured; accounts report `not_connected`. |
 | [Commerce Sandbox](plugins/commerce/README.md) | Propose catalogue orders for human review and Sandbox checkout | Local stdio MCP bridge; Codex, Claude Code and Aria Code | Separately configured Commerce service and agent credential. Legacy remote order tools require operator opt-in. |
 | [Finance](plugins/finance/README.md) | Financial statements, disclosure evidence, risk analysis and simulated backtests | Local stdio MCP; Codex, Claude Code and Aria Code | Install the independent [Financial Service](https://github.com/artheras/financial-service). Network data and broker reads require additional configuration. |
-| [Computer Use](plugins/computer-use/README.md) | Operate an isolated browser with approved actions | Local stdio MCP; Codex, Claude Code and Aria Code | An Aria Code build with `aria-computer-use`, Python and Chromium. Browser actions require the macOS approval adapter; Windows/Linux currently expose capability checks only. |
 
-The repository includes plugin metadata, workflow instructions, configuration templates and the Go Commerce backend. Finance algorithms and the Computer Use runtime live in their linked service repositories.
+The repository includes plugin metadata, workflow instructions, configuration templates and the Go Commerce backend. Finance algorithms live in their linked service repository.
 
 ## Connect Commerce Remote
 
