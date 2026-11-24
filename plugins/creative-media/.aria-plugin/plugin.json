@@ -1,0 +1,13 @@
+{
+  "name": "creative-media",
+  "displayName": "Aria Creative & Media",
+  "version": "0.1.0",
+  "description": "Figma inspection, Canva autofill/assets, OpenAI image generation/editing, and Kling/Runway video generation over MCP.",
+  "capabilities": [
+    "skills",
+    "mcp"
+  ],
+  "entrypoints": {
+    "skills": "skills/"
+  }
+}
