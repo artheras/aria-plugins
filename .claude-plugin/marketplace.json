@@ -31,16 +31,6 @@
       ]
     },
     {
-      "name": "computer-use",
-      "source": "./plugins/computer-use",
-      "version": "0.1.0",
-      "description": "Operate an isolated local browser with approved actions and fresh page observations.",
-      "repository": "https://github.com/artheras/aria-code",
-      "skills": [
-        "./skills/computer-use"
-      ]
-    },
-    {
       "name": "healthcare",
       "source": "./plugins/healthcare",
       "version": "0.1.0",

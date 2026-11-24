@@ -44,7 +44,7 @@ Codex can use the MCP tools directly, or install this skill folder in its skill
 directory. codex.toml and .mcp.json show the same server in host-specific formats.
 No financial calculations are duplicated in these wrappers.
 
-The service exposes the 36 read-only tools listed in package.json. Networking defaults to off
+The service exposes the 46 read-only tools listed in `artheras/financial-service` (including deterministic DCF valuation & sensitivity matrices, SEC due diligence red-flag screening, EDGAR filing monitoring, vertical SaaS/semiconductor KPIs, and pre-trade risk compliance gates). For zero-Python remote setups with pure-Rust `aria-native`, start the service with `--transport streamable-http --host 0.0.0.0 --port 8765` and point `.mcp.json` at its `"url"`. Networking defaults to off
 in the service itself; the templates (mcp.json, .mcp.json, codex.toml) do not set
 it, so the host environment decides. Supplied-data calculations work without
 market credentials. To allow market data and SEC reads, set
